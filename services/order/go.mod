@@ -1,3 +1,3 @@
-module eba/services/order
+module github.com/umohsamuel/eba/services/order
 
 go 1.27.1
