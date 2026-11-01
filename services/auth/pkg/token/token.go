@@ -1,0 +1,50 @@
+package token
+
+import (
+	"errors"
+	"time"
+
+	"github.com/golang-jwt/jwt/v5"
+	"github.com/umohsamuel/eba/services/auth/internal/adapters/db/sqlc"
+)
+
+func GenerateAccessToken(user sqlc.User, jwtSecret []byte, accessTokenTTL time.Duration) (string, error) {
+	expirationTime := time.Now().UTC().Add(accessTokenTTL)
+
+	claims := jwt.MapClaims{
+		"sub":  user.ID.String(),
+		"user": user,
+		"exp":  expirationTime.Unix(),
+		"iat":  time.Now().UTC().Unix(),
+	}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+
+	tokenString, err := token.SignedString(jwtSecret)
+	if err != nil {
+		return "", err
+	}
+
+	return tokenString, nil
+}
+
+func ValidateToken(tokenString string, jwtSecret []byte) (jwt.MapClaims, error) {
+	token, err := jwt.Parse(tokenString, func(t *jwt.Token) (interface{}, error) {
+		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, errors.New("invalid token")
+		}
+		return jwtSecret, nil
+	})
+
+	if err != nil {
+		if errors.Is(err, jwt.ErrTokenExpired) {
+			return nil, errors.New("token expired")
+		}
+		return nil, errors.New("invalid token")
+	}
+
+	if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
+		return claims, nil
+	}
+	return nil, errors.New("invalid token")
+}
