@@ -13,7 +13,7 @@ import (
 
 type Config struct {
 	Host     string
-	Port     string
+	Port     int
 	User     string
 	Password string
 	Database string
@@ -21,8 +21,8 @@ type Config struct {
 }
 
 type Service interface {
+	DB() *sql.DB
 	Health() map[string]string
-
 	Close() error
 }
 
@@ -36,17 +36,27 @@ func New(cfg Config) Service {
 		cfg.Schema = "public"
 	}
 
-	connStr := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable&search_path=%s", cfg.User, cfg.Password, cfg.Host, cfg.Port, cfg.Database, cfg.Schema)
+	connStr := fmt.Sprintf("postgres://%s:%s@%s:%d/%s?sslmode=disable&search_path=%s", cfg.User, cfg.Password, cfg.Host, cfg.Port, cfg.Database, cfg.Schema)
 
 	db, err := sql.Open("pgx", connStr)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	return &service{
-		db: db,
+	if err := db.Ping(); err != nil {
+		db.Close()
+		log.Fatal(err)
 	}
 
+	return &service{
+		db:       db,
+		database: cfg.Database,
+	}
+
+}
+
+func (s *service) DB() *sql.DB {
+	return s.db
 }
 
 func (s *service) Health() map[string]string {
