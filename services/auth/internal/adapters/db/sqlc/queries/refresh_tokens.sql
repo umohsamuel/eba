@@ -13,12 +13,13 @@ INSERT INTO refresh_tokens (
 )
 RETURNING *;
 
--- name: UpdateRefreshToken :one
+-- name: RevokeRefreshToken :one
 UPDATE refresh_tokens
 SET revoked = $2
 WHERE id = $1
 RETURNING *;
 
--- name: DeleteRefreshToken :exec
+-- name: DeleteRefreshToken :one
 DELETE FROM refresh_tokens
-WHERE id = $1;
+WHERE id = $1
+RETURNING id;
