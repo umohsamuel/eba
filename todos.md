@@ -31,3 +31,5 @@ DROP INDEX IF EXISTS idx_refresh_tokens_cleanup;
 ```
 
 dont use pg cron like in the example, just build soeothing out
+
+2. i should have some sort of pagination pkg and use it for the lists like list users and etc

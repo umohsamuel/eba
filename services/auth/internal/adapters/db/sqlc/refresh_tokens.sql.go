@@ -8,7 +8,7 @@ package sqlc
 import (
 	"context"
 
-	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/google/uuid"
 )
 
 const createRefreshToken = `-- name: CreateRefreshToken :one
@@ -21,12 +21,12 @@ RETURNING id, user_id, token, expires_at, created_at, revoked
 `
 
 type CreateRefreshTokenParams struct {
-	UserID pgtype.UUID
+	UserID uuid.UUID
 	Token  string
 }
 
 func (q *Queries) CreateRefreshToken(ctx context.Context, arg CreateRefreshTokenParams) (RefreshToken, error) {
-	row := q.db.QueryRow(ctx, createRefreshToken, arg.UserID, arg.Token)
+	row := q.db.QueryRowContext(ctx, createRefreshToken, arg.UserID, arg.Token)
 	var i RefreshToken
 	err := row.Scan(
 		&i.ID,
@@ -44,8 +44,8 @@ DELETE FROM refresh_tokens
 WHERE id = $1
 `
 
-func (q *Queries) DeleteRefreshToken(ctx context.Context, id pgtype.UUID) error {
-	_, err := q.db.Exec(ctx, deleteRefreshToken, id)
+func (q *Queries) DeleteRefreshToken(ctx context.Context, id uuid.UUID) error {
+	_, err := q.db.ExecContext(ctx, deleteRefreshToken, id)
 	return err
 }
 
@@ -54,8 +54,8 @@ SELECT id, user_id, token, expires_at, created_at, revoked FROM refresh_tokens
 WHERE id = $1 LIMIT 1
 `
 
-func (q *Queries) GetRefreshToken(ctx context.Context, id pgtype.UUID) (RefreshToken, error) {
-	row := q.db.QueryRow(ctx, getRefreshToken, id)
+func (q *Queries) GetRefreshToken(ctx context.Context, id uuid.UUID) (RefreshToken, error) {
+	row := q.db.QueryRowContext(ctx, getRefreshToken, id)
 	var i RefreshToken
 	err := row.Scan(
 		&i.ID,
@@ -73,7 +73,7 @@ SELECT id, user_id, token, expires_at, created_at, revoked FROM refresh_tokens
 `
 
 func (q *Queries) ListRefreshTokens(ctx context.Context) ([]RefreshToken, error) {
-	rows, err := q.db.Query(ctx, listRefreshTokens)
+	rows, err := q.db.QueryContext(ctx, listRefreshTokens)
 	if err != nil {
 		return nil, err
 	}
@@ -93,6 +93,9 @@ func (q *Queries) ListRefreshTokens(ctx context.Context) ([]RefreshToken, error)
 		}
 		items = append(items, i)
 	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
@@ -107,12 +110,12 @@ RETURNING id, user_id, token, expires_at, created_at, revoked
 `
 
 type UpdateRefreshTokenParams struct {
-	ID      pgtype.UUID
+	ID      uuid.UUID
 	Revoked bool
 }
 
 func (q *Queries) UpdateRefreshToken(ctx context.Context, arg UpdateRefreshTokenParams) (RefreshToken, error) {
-	row := q.db.QueryRow(ctx, updateRefreshToken, arg.ID, arg.Revoked)
+	row := q.db.QueryRowContext(ctx, updateRefreshToken, arg.ID, arg.Revoked)
 	var i RefreshToken
 	err := row.Scan(
 		&i.ID,
