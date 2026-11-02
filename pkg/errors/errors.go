@@ -1,5 +1,7 @@
 package apperror
 
+import "errors"
+
 type Kind string
 
 const (
@@ -38,4 +40,17 @@ func (e *Error) Error() string {
 
 func (e *Error) Unwrap() error {
 	return e.Cause
+}
+
+func ErrorKind(err error) Kind {
+	if err == nil {
+		return ""
+	}
+
+	var customErr *Error
+	if errors.As(err, &customErr) {
+		return customErr.Kind
+	}
+
+	return KindInternal
 }
