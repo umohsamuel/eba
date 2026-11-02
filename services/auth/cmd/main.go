@@ -45,7 +45,8 @@ func main() {
 	})
 
 	appServices := services.New(services.Config{
-		Users: repos.Users,
+		Repository: repos,
+		Env:        *envCfg,
 	})
 
 	httpSrv := httpAdapter.NewHttpServer(appServices)

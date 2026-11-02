@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/umohsamuel/eba/services/auth/internal/domain/errors"
 	"github.com/umohsamuel/eba/services/auth/internal/domain/refreshtoken"
 	"github.com/umohsamuel/eba/services/auth/internal/domain/user"
@@ -20,14 +21,16 @@ type AuthService struct {
 }
 
 type Config struct {
-	Users user.UserRepository
-	Env   env.Env
+	Users        user.UserRepository
+	RefreshToken refreshtoken.RefreshTokenRepository
+	Env          env.Env
 }
 
 func NewAuthService(deps Config) *AuthService {
 	return &AuthService{
-		users: deps.Users,
-		env:   deps.Env,
+		users:        deps.Users,
+		refreshToken: deps.RefreshToken,
+		env:          deps.Env,
 	}
 }
 
@@ -108,14 +111,16 @@ func (s *AuthService) Login(
 		return nil, errors.ErrInvalidCredentials
 	}
 
-	accessToken, err := token.GenerateAccessToken(*u, []byte(s.env.JWT_SECRET), 15*time.Minute)
+	accessToken, err := token.GenerateAccessToken(*u, []byte(s.env.JWT.JWT_SECRET), 15*time.Minute)
 
-	refershToken, err := token.GenerateAccessToken(*u, []byte(s.env.JWT_SECRET), 7*24*time.Hour)
+	id := uuid.New()
+	refershToken, err := token.GenerateRefreshToken(*u, []byte(s.env.JWT.JWT_REFRESH_SECRET), 7*24*time.Hour)
 
-	if err = s.refreshToken.Create(ctx, &refreshtoken.RefreshToken{
+	createdRefreshToken, err := s.refreshToken.Create(ctx, &refreshtoken.RefreshToken{
 		UserID: u.ID,
 		Token:  refershToken,
-	}); err != nil {
+	})
+	if err != nil {
 		return nil, errors.ErrInternal
 	}
 
@@ -123,7 +128,7 @@ func (s *AuthService) Login(
 		User: u,
 		Token: &TokenConfig{
 			AccessToken:  accessToken,
-			RefreshToken: refershToken,
+			RefreshToken: createdRefreshToken.Token,
 		},
 	}, nil
 }

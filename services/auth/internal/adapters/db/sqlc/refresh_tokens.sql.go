@@ -39,14 +39,17 @@ func (q *Queries) CreateRefreshToken(ctx context.Context, arg CreateRefreshToken
 	return i, err
 }
 
-const deleteRefreshToken = `-- name: DeleteRefreshToken :exec
+const deleteRefreshToken = `-- name: DeleteRefreshToken :one
 DELETE FROM refresh_tokens
 WHERE id = $1
+RETURNING id
 `
 
-func (q *Queries) DeleteRefreshToken(ctx context.Context, id uuid.UUID) error {
-	_, err := q.db.ExecContext(ctx, deleteRefreshToken, id)
-	return err
+func (q *Queries) DeleteRefreshToken(ctx context.Context, id uuid.UUID) (uuid.UUID, error) {
+	row := q.db.QueryRowContext(ctx, deleteRefreshToken, id)
+	var id_2 uuid.UUID
+	err := row.Scan(&id_2)
+	return id_2, err
 }
 
 const getRefreshToken = `-- name: GetRefreshToken :one
@@ -102,20 +105,20 @@ func (q *Queries) ListRefreshTokens(ctx context.Context) ([]RefreshToken, error)
 	return items, nil
 }
 
-const updateRefreshToken = `-- name: UpdateRefreshToken :one
+const revokeRefreshToken = `-- name: RevokeRefreshToken :one
 UPDATE refresh_tokens
 SET revoked = $2
 WHERE id = $1
 RETURNING id, user_id, token, expires_at, created_at, revoked
 `
 
-type UpdateRefreshTokenParams struct {
+type RevokeRefreshTokenParams struct {
 	ID      uuid.UUID
 	Revoked bool
 }
 
-func (q *Queries) UpdateRefreshToken(ctx context.Context, arg UpdateRefreshTokenParams) (RefreshToken, error) {
-	row := q.db.QueryRowContext(ctx, updateRefreshToken, arg.ID, arg.Revoked)
+func (q *Queries) RevokeRefreshToken(ctx context.Context, arg RevokeRefreshTokenParams) (RefreshToken, error) {
+	row := q.db.QueryRowContext(ctx, revokeRefreshToken, arg.ID, arg.Revoked)
 	var i RefreshToken
 	err := row.Scan(
 		&i.ID,
