@@ -5,10 +5,10 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/umohsamuel/eba/services/auth/internal/adapters/db/sqlc"
+	"github.com/umohsamuel/eba/services/auth/internal/domain/user"
 )
 
-func GenerateAccessToken(user sqlc.User, jwtSecret []byte, accessTokenTTL time.Duration) (string, error) {
+func GenerateAccessToken(user user.User, jwtSecret []byte, accessTokenTTL time.Duration) (string, error) {
 	expirationTime := time.Now().UTC().Add(accessTokenTTL)
 
 	claims := jwt.MapClaims{

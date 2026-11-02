@@ -3,6 +3,11 @@ package errors
 import apperror "github.com/umohsamuel/eba/pkg/errors"
 
 var (
+	ErrBadRequest = apperror.New(
+		apperror.KindValidation,
+		"bad request",
+	)
+
 	ErrInternal = apperror.New(
 		apperror.KindInternal,
 		"internal server error",

@@ -21,6 +21,11 @@ func (h *AuthHandler) RegisterRoutes(rg *gin.RouterGroup) {
 	}
 }
 
+type registerRequest struct {
+	Email    string `json:"email"`
+	Password string `json:"password"`
+}
+
 func (h *AuthHandler) Register(c *gin.Context) {
 	// eba here
 }

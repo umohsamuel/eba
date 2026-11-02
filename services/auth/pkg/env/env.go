@@ -11,6 +11,7 @@ type Env struct {
 	Port          int    `env:"PORT" envDefault:"8080"`
 	CLIENT_ORIGIN string `env:"CLIENT_ORIGIN"`
 	DB            PostgresEnv
+	JWT_SECRET    string `env:"JWT_SECRET"`
 }
 
 type PostgresEnv struct {
