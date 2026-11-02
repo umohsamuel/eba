@@ -2,8 +2,12 @@ package main
 
 import (
 	"log"
+	"time"
 
 	"github.com/umohsamuel/eba/pkg/database"
+	"github.com/umohsamuel/eba/pkg/server"
+	"github.com/umohsamuel/eba/services/auth/internal/adapters/db/repository"
+	httpAdapter "github.com/umohsamuel/eba/services/auth/internal/adapters/transport/http"
 	"github.com/umohsamuel/eba/services/auth/internal/services"
 	"github.com/umohsamuel/eba/services/auth/pkg/env"
 )
@@ -36,11 +40,25 @@ func main() {
 
 	db := dbSrv.DB()
 
-	srvsCfg := services.Config{
-		// in order to proceed, create user repository in sqlc repo
-		// Users: sqlc.,
-	}
-	srvs := services.New(srvsCfg)
+	repos := repository.New(repository.Config{
+		DB: db,
+	})
 
-	// q := sqlc.New(db)
+	appServices := services.New(services.Config{
+		Users: repos.Users,
+	})
+
+	httpSrv := httpAdapter.NewHttpServer(appServices)
+
+	srvCfg := server.Config{
+		Port:         8080,
+		ReadTimeout:  10 * time.Second,
+		WriteTimeout: 10 * time.Second,
+	}
+
+	appServer := server.New(srvCfg, httpSrv.Handler())
+
+	if err := appServer.ListenAndServe(); err != nil {
+		log.Fatal(err)
+	}
 }
