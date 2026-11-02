@@ -65,13 +65,25 @@ func (r GinResponder[T]) WithMeta(meta *response.Meta) GinResponder[T] {
 }
 
 func (r GinResponder[T]) Send() {
-	if r.envelope.Meta == nil {
-		r.envelope.Meta = &response.Meta{}
-	}
+	if requestID := r.ctx.GetString("X-Request-ID"); requestID != "" {
+		if r.envelope.Meta == nil {
+			r.envelope.Meta = &response.Meta{}
+		}
 
-	if r.envelope.Meta.RequestID == "" {
-		r.envelope.Meta.RequestID = r.ctx.GetString("X-Request-ID")
+		r.envelope.Meta.RequestID = requestID
 	}
 
 	r.ctx.JSON(r.statusCode, r.envelope)
+}
+
+func (r GinResponder[T]) Abort() {
+	if requestID := r.ctx.GetString("X-Request-ID"); requestID != "" {
+		if r.envelope.Meta == nil {
+			r.envelope.Meta = &response.Meta{}
+		}
+
+		r.envelope.Meta.RequestID = requestID
+	}
+
+	r.ctx.AbortWithStatusJSON(r.statusCode, r.envelope)
 }
