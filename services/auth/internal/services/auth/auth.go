@@ -2,20 +2,32 @@ package auth
 
 import (
 	"context"
+	"time"
 
 	"github.com/umohsamuel/eba/services/auth/internal/domain/errors"
+	"github.com/umohsamuel/eba/services/auth/internal/domain/refreshtoken"
 	"github.com/umohsamuel/eba/services/auth/internal/domain/user"
+	"github.com/umohsamuel/eba/services/auth/pkg/env"
 	"github.com/umohsamuel/eba/services/auth/pkg/hash"
 	"github.com/umohsamuel/eba/services/auth/pkg/regexx"
+	"github.com/umohsamuel/eba/services/auth/pkg/token"
 )
 
 type AuthService struct {
-	users user.UserRepository
+	users        user.UserRepository
+	refreshToken refreshtoken.RefreshTokenRepository
+	env          env.Env
 }
 
-func NewAuthService(users user.UserRepository) *AuthService {
+type Config struct {
+	Users user.UserRepository
+	Env   env.Env
+}
+
+func NewAuthService(deps Config) *AuthService {
 	return &AuthService{
-		users: users,
+		users: deps.Users,
+		env:   deps.Env,
 	}
 }
 
@@ -23,23 +35,23 @@ func (s *AuthService) Register(
 	ctx context.Context,
 	email string,
 	password string,
-) error {
+) (*user.User, error) {
 	if !regexx.ValidateEmail(email) {
-		return errors.ErrInvalidEmail
+		return nil, errors.ErrInvalidEmail
 	}
 
 	if !regexx.ValidatePassword(password) {
-		return errors.ErrInvalidPassword
+		return nil, errors.ErrInvalidPassword
 	}
 
 	passwordHash, err := hash.HashPassword(password)
 	if err != nil {
-		return errors.ErrInternal
+		return nil, errors.ErrInternal
 	}
 
 	_, err = s.users.GetByEmail(ctx, email)
 	if err == nil {
-		return errors.ErrEmailAlreadyExists
+		return nil, errors.ErrEmailAlreadyExists
 	}
 
 	newUser := &user.User{
@@ -47,28 +59,38 @@ func (s *AuthService) Register(
 		PasswordHash: passwordHash,
 	}
 
-	err = s.users.Create(ctx, newUser)
+	createdUser, err := s.users.Create(ctx, newUser)
 	if err != nil {
-		return errors.ErrInternal
+		return nil, errors.ErrInternal
 	}
 
-	return nil
+	return createdUser, nil
 }
 
 // A dummy hash to run against if a user isn't found to mitigate timing attacks.
 const dummyHash = "$2a$10$xK9vG/5F7y8Kz7v9B6h2u.D8r1e2f3g4h5i6j7k8l9m0n1o2p3q4r"
 
+type TokenConfig struct {
+	AccessToken  string
+	RefreshToken string
+}
+
+type LoginResponse struct {
+	User  *user.User
+	Token *TokenConfig
+}
+
 func (s *AuthService) Login(
 	ctx context.Context,
 	email string,
 	password string,
-) error {
+) (*LoginResponse, error) {
 	if !regexx.ValidateEmail(email) {
-		return errors.ErrInvalidEmail
+		return nil, errors.ErrInvalidEmail
 	}
 
 	if !regexx.ValidatePassword(password) {
-		return errors.ErrInvalidPassword
+		return nil, errors.ErrInvalidPassword
 	}
 
 	u, err := s.users.GetByEmail(ctx, email)
@@ -81,13 +103,27 @@ func (s *AuthService) Login(
 	}
 
 	isCorrectPassword := hash.CheckPasswordHash(password, targetHash)
-	if !isCorrectPassword {
-		return errors.ErrInvalidCredentials
-	}
 
 	if err != nil || !isCorrectPassword {
-		return errors.ErrInvalidCredentials
+		return nil, errors.ErrInvalidCredentials
 	}
 
-	return nil
+	accessToken, err := token.GenerateAccessToken(*u, []byte(s.env.JWT_SECRET), 15*time.Minute)
+
+	refershToken, err := token.GenerateAccessToken(*u, []byte(s.env.JWT_SECRET), 7*24*time.Hour)
+
+	if err = s.refreshToken.Create(ctx, &refreshtoken.RefreshToken{
+		UserID: u.ID,
+		Token:  refershToken,
+	}); err != nil {
+		return nil, errors.ErrInternal
+	}
+
+	return &LoginResponse{
+		User: u,
+		Token: &TokenConfig{
+			AccessToken:  accessToken,
+			RefreshToken: refershToken,
+		},
+	}, nil
 }

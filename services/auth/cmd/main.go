@@ -4,6 +4,7 @@ import (
 	"log"
 
 	"github.com/umohsamuel/eba/pkg/database"
+	"github.com/umohsamuel/eba/services/auth/internal/services"
 	"github.com/umohsamuel/eba/services/auth/pkg/env"
 )
 
@@ -34,6 +35,12 @@ func main() {
 	defer dbSrv.Close()
 
 	db := dbSrv.DB()
+
+	srvsCfg := services.Config{
+		// in order to proceed, create user repository in sqlc repo
+		// Users: sqlc.,
+	}
+	srvs := services.New(srvsCfg)
 
 	// q := sqlc.New(db)
 }
