@@ -13,38 +13,33 @@ type TokenManager struct {
 
 	accessSecret   []byte
 	accessAudience []string
-	accessTTL      time.Duration
 
 	refreshSecret   []byte
 	refreshAudience []string
-	refreshTTL      time.Duration
 }
 
-func NewTokenManager(issuer string, accessSecret []byte, accessAudience []string, accessTTL time.Duration, refreshSecret []byte, refreshAudience []string, refreshTTL time.Duration) *TokenManager {
+func NewTokenManager(issuer string, accessSecret []byte, accessAudience []string, refreshSecret []byte, refreshAudience []string) *TokenManager {
 	return &TokenManager{
 		issuer:          issuer,
 		accessSecret:    accessSecret,
 		accessAudience:  accessAudience,
-		accessTTL:       accessTTL,
 		refreshSecret:   refreshSecret,
 		refreshAudience: refreshAudience,
-		refreshTTL:      refreshTTL,
 	}
 }
 
-func (m *TokenManager) GenerateAccessToken(user user.User) (string, error) {
+func (m *TokenManager) GenerateAccessToken(user user.User, accessTTL time.Duration) (string, error) {
 	now := time.Now().UTC()
 
 	claims := CustomClaims{
-
 		User: user,
 		RegisteredClaims: jwt.RegisteredClaims{
-			Subject:   user.ID.String(),                          // sub
-			ExpiresAt: jwt.NewNumericDate(now.Add(m.refreshTTL)), // exp
-			IssuedAt:  jwt.NewNumericDate(now),                   // iat
-			NotBefore: jwt.NewNumericDate(now),                   // nbf
-			Issuer:    m.issuer,                                  // iss
-			Audience:  m.refreshAudience,                         // aud
+			Subject:   user.ID.String(),                       // sub
+			ExpiresAt: jwt.NewNumericDate(now.Add(accessTTL)), // exp
+			IssuedAt:  jwt.NewNumericDate(now),                // iat
+			NotBefore: jwt.NewNumericDate(now),                // nbf
+			Issuer:    m.issuer,                               // iss
+			Audience:  m.accessAudience,                       // aud
 		},
 	}
 
@@ -63,19 +58,18 @@ type CustomClaims struct {
 	jwt.RegisteredClaims
 }
 
-func (m *TokenManager) GenerateRefreshToken(user user.User, refreshTokenId string) (string, error) {
-	now := time.Now().UTC()
+func (m *TokenManager) GenerateRefreshToken(user user.User, refreshTokenId string, issuedAt, expiresAt time.Time) (string, error) {
 
 	claims := CustomClaims{
 		User: user,
 		RegisteredClaims: jwt.RegisteredClaims{
-			ID:        refreshTokenId,                            // jti
-			Subject:   user.ID.String(),                          // sub
-			ExpiresAt: jwt.NewNumericDate(now.Add(m.refreshTTL)), // exp
-			IssuedAt:  jwt.NewNumericDate(now),                   // iat
-			NotBefore: jwt.NewNumericDate(now),                   // nbf
-			Issuer:    m.issuer,                                  // iss
-			Audience:  m.refreshAudience,                         // aud
+			ID:        refreshTokenId,                // jti
+			Subject:   user.ID.String(),              // sub
+			ExpiresAt: jwt.NewNumericDate(expiresAt), // exp
+			IssuedAt:  jwt.NewNumericDate(issuedAt),  // iat
+			NotBefore: jwt.NewNumericDate(issuedAt),  // nbf
+			Issuer:    m.issuer,                      // iss
+			Audience:  m.refreshAudience,             // aud
 		},
 	}
 
