@@ -5,6 +5,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	ginresponse "github.com/umohsamuel/eba/pkg/response/gin"
+	domainerrors "github.com/umohsamuel/eba/services/auth/internal/domain/errors"
 	"github.com/umohsamuel/eba/services/auth/internal/services"
 )
 
@@ -33,7 +34,7 @@ func (h *AuthHandler) Register(c *gin.Context) {
 	var req registerRequest
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		ginresponse.HandleError(c, err).Send()
+		ginresponse.HandleError(c, domainerrors.ErrBadRequest.Wrap(err)).Send()
 		return
 	}
 
@@ -55,7 +56,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	var req loginRequest
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		ginresponse.HandleError(c, err).Send()
+		ginresponse.HandleError(c, domainerrors.ErrBadRequest.Wrap(err)).Send()
 		return
 	}
 
