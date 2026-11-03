@@ -2,9 +2,12 @@ package main
 
 import (
 	"log"
+	"log/slog"
+	"os"
 	"time"
 
 	"github.com/umohsamuel/eba/pkg/database"
+	"github.com/umohsamuel/eba/pkg/logger"
 	"github.com/umohsamuel/eba/pkg/server"
 	"github.com/umohsamuel/eba/services/auth/internal/adapters/db/repository"
 	httpAdapter "github.com/umohsamuel/eba/services/auth/internal/adapters/transport/http"
@@ -22,6 +25,9 @@ func init() {
 	}
 
 	envCfg = cfg
+
+	log := logger.New("auth", envCfg.AppEnv, envCfg.LogLevel)
+	slog.SetDefault(log)
 }
 
 func main() {
@@ -60,6 +66,7 @@ func main() {
 	appServer := server.New(srvCfg, httpSrv.Handler())
 
 	if err := appServer.ListenAndServe(); err != nil {
-		log.Fatal(err)
+		slog.Error("server stopped", "error", err)
+		os.Exit(1)
 	}
 }
