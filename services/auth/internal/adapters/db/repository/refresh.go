@@ -3,9 +3,11 @@ package repository
 import (
 	"context"
 	"database/sql"
+	"errors"
 
 	"github.com/google/uuid"
 	"github.com/umohsamuel/eba/services/auth/internal/adapters/db/sqlc"
+	domainErrors "github.com/umohsamuel/eba/services/auth/internal/domain/errors"
 	"github.com/umohsamuel/eba/services/auth/internal/domain/refreshtoken"
 )
 
@@ -25,14 +27,18 @@ var _ refreshtoken.RefreshTokenRepository = (*RefreshRepositoryAdapter)(nil)
 
 func (r *RefreshRepositoryAdapter) Create(ctx context.Context, _refreshToken *refreshtoken.RefreshToken) (*refreshtoken.RefreshToken, error) {
 	createdToken, err := r.queries.CreateRefreshToken(ctx, sqlc.CreateRefreshTokenParams{
-		UserID: _refreshToken.UserID,
-		Token:  _refreshToken.Token,
+		ID:        _refreshToken.ID,
+		UserID:    _refreshToken.UserID,
+		Token:     _refreshToken.Token,
+		ExpiresAt: _refreshToken.ExpiresAt,
 	})
 	if err != nil {
-		return nil, err
+		if isForeignKeyViolation(err) {
+			return nil, domainErrors.ErrUserNotFound.Wrap(err)
+		}
+		return nil, domainErrors.ErrInternal.Wrap(err)
 	}
 
-	_refreshToken.ID = createdToken.ID
 	_refreshToken.Revoked = createdToken.Revoked
 
 	return _refreshToken, nil
@@ -41,7 +47,10 @@ func (r *RefreshRepositoryAdapter) Create(ctx context.Context, _refreshToken *re
 func (r *RefreshRepositoryAdapter) GetByID(ctx context.Context, id uuid.UUID) (*refreshtoken.RefreshToken, error) {
 	token, err := r.queries.GetRefreshToken(ctx, id)
 	if err != nil {
-		return nil, err
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, domainErrors.ErrRefreshTokenNotFound
+		}
+		return nil, domainErrors.ErrInternal.Wrap(err)
 	}
 
 	return &refreshtoken.RefreshToken{
@@ -58,7 +67,10 @@ func (r *RefreshRepositoryAdapter) Revoke(ctx context.Context, id uuid.UUID) (*u
 		Revoked: true,
 	})
 	if err != nil {
-		return nil, err
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, domainErrors.ErrRefreshTokenNotFound
+		}
+		return nil, domainErrors.ErrInternal.Wrap(err)
 	}
 
 	return &revokedToken.ID, err

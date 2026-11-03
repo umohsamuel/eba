@@ -29,7 +29,7 @@ var _ user.UserRepository = (*UserRepositoryAdapter)(nil)
 func (r *UserRepositoryAdapter) List(ctx context.Context, filter user.UserFilter) ([]*user.User, error) {
 	dbUsers, err := r.queries.ListUsers(ctx)
 	if err != nil {
-		return nil, err
+		return nil, domainErrors.ErrInternal.Wrap(err)
 	}
 
 	users := make([]*user.User, 0, len(dbUsers))
@@ -52,7 +52,10 @@ func (r *UserRepositoryAdapter) Create(ctx context.Context, u *user.User) (*user
 
 	row, err := r.queries.CreateUser(ctx, params)
 	if err != nil {
-		return nil, err
+		if isUniqueViolation(err) {
+			return nil, domainErrors.ErrEmailAlreadyExists.Wrap(err)
+		}
+		return nil, domainErrors.ErrInternal.Wrap(err)
 	}
 
 	u.ID = row.ID
@@ -66,7 +69,7 @@ func (r *UserRepositoryAdapter) GetByEmail(ctx context.Context, email string) (*
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, domainErrors.ErrUserNotFound
 		}
-		return nil, err
+		return nil, domainErrors.ErrInternal.Wrap(err)
 	}
 
 	return &user.User{
@@ -82,7 +85,7 @@ func (r *UserRepositoryAdapter) GetByID(ctx context.Context, id uuid.UUID) (*use
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, domainErrors.ErrUserNotFound
 		}
-		return nil, err
+		return nil, domainErrors.ErrInternal.Wrap(err)
 	}
 
 	return &user.User{
@@ -96,7 +99,10 @@ func (r *UserRepositoryAdapter) Update(ctx context.Context, _user *user.User) (*
 
 	existingUser, err := r.queries.GetUser(ctx, _user.ID)
 	if err != nil {
-		return nil, domainErrors.ErrUserNotFound
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, domainErrors.ErrUserNotFound
+		}
+		return nil, domainErrors.ErrInternal.Wrap(err)
 	}
 
 	if _user.Email != "" {
@@ -113,7 +119,13 @@ func (r *UserRepositoryAdapter) Update(ctx context.Context, _user *user.User) (*
 		PasswordHash: existingUser.PasswordHash,
 	})
 	if err != nil {
-		return nil, domainErrors.ErrInternal
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, domainErrors.ErrUserNotFound
+		}
+		if isUniqueViolation(err) {
+			return nil, domainErrors.ErrEmailAlreadyExists.Wrap(err)
+		}
+		return nil, domainErrors.ErrInternal.Wrap(err)
 	}
 
 	return &user.User{
@@ -129,7 +141,7 @@ func (r *UserRepositoryAdapter) Delete(ctx context.Context, _id uuid.UUID) (*uui
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, domainErrors.ErrUserNotFound
 		}
-		return nil, err
+		return nil, domainErrors.ErrInternal.Wrap(err)
 	}
 	return &id, nil
 }
