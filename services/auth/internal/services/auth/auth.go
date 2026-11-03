@@ -2,6 +2,7 @@ package auth
 
 import (
 	"context"
+	stderrors "errors"
 	"time"
 
 	"github.com/google/uuid"
@@ -18,12 +19,14 @@ type AuthService struct {
 	users        user.UserRepository
 	refreshToken refreshtoken.RefreshTokenRepository
 	env          env.Env
+	tokenManager token.TokenManager
 }
 
 type Config struct {
 	Users        user.UserRepository
 	RefreshToken refreshtoken.RefreshTokenRepository
 	Env          env.Env
+	TokenManager token.TokenManager
 }
 
 func NewAuthService(deps Config) *AuthService {
@@ -31,6 +34,7 @@ func NewAuthService(deps Config) *AuthService {
 		users:        deps.Users,
 		refreshToken: deps.RefreshToken,
 		env:          deps.Env,
+		tokenManager: deps.TokenManager,
 	}
 }
 
@@ -49,12 +53,15 @@ func (s *AuthService) Register(
 
 	passwordHash, err := hash.HashPassword(password)
 	if err != nil {
-		return nil, errors.ErrInternal
+		return nil, errors.ErrInternal.Wrap(err)
 	}
 
 	_, err = s.users.GetByEmail(ctx, email)
-	if err == nil {
+	switch {
+	case err == nil:
 		return nil, errors.ErrEmailAlreadyExists
+	case !stderrors.Is(err, errors.ErrUserNotFound):
+		return nil, err
 	}
 
 	newUser := &user.User{
@@ -62,9 +69,11 @@ func (s *AuthService) Register(
 		PasswordHash: passwordHash,
 	}
 
+	// The repository returns domain errors: ErrEmailAlreadyExists if a
+	// concurrent request registered the same email first, ErrInternal otherwise.
 	createdUser, err := s.users.Create(ctx, newUser)
 	if err != nil {
-		return nil, errors.ErrInternal
+		return nil, err
 	}
 
 	return createdUser, nil
@@ -97,6 +106,9 @@ func (s *AuthService) Login(
 	}
 
 	u, err := s.users.GetByEmail(ctx, email)
+	if err != nil && !stderrors.Is(err, errors.ErrUserNotFound) {
+		return nil, err
+	}
 
 	var targetHash string
 	if err != nil {
@@ -111,17 +123,28 @@ func (s *AuthService) Login(
 		return nil, errors.ErrInvalidCredentials
 	}
 
-	accessToken, err := token.GenerateAccessToken(*u, []byte(s.env.JWT.JWT_SECRET), 15*time.Minute)
+	accessToken, err := s.tokenManager.GenerateAccessToken(*u, 15*time.Minute)
+	if err != nil {
+		return nil, errors.ErrInternal.Wrap(err)
+	}
 
 	id := uuid.New()
-	refershToken, err := token.GenerateRefreshToken(*u, []byte(s.env.JWT.JWT_REFRESH_SECRET), 7*24*time.Hour)
+	issuedAt := time.Now().UTC().Truncate(time.Second)
+	expiresAt := issuedAt.Add(7 * 24 * time.Hour)
+
+	refershToken, err := s.tokenManager.GenerateRefreshToken(*u, id.String(), issuedAt, expiresAt)
+	if err != nil {
+		return nil, errors.ErrInternal.Wrap(err)
+	}
 
 	createdRefreshToken, err := s.refreshToken.Create(ctx, &refreshtoken.RefreshToken{
-		UserID: u.ID,
-		Token:  refershToken,
+		ID:        id,
+		UserID:    u.ID,
+		Token:     refershToken,
+		ExpiresAt: expiresAt,
 	})
 	if err != nil {
-		return nil, errors.ErrInternal
+		return nil, errors.ErrInternal.Wrap(err)
 	}
 
 	return &LoginResponse{
