@@ -1,10 +1,15 @@
 package refreshtoken
 
-import "github.com/google/uuid"
+import (
+	"time"
+
+	"github.com/google/uuid"
+)
 
 type RefreshToken struct {
-	ID      uuid.UUID
-	UserID  uuid.UUID
-	Token   string
-	Revoked bool
+	ID        uuid.UUID
+	UserID    uuid.UUID
+	Token     string
+	ExpiresAt time.Time
+	Revoked   bool
 }

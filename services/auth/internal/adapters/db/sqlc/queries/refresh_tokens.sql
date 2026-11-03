@@ -7,9 +7,9 @@ SELECT * FROM refresh_tokens;
 
 -- name: CreateRefreshToken :one
 INSERT INTO refresh_tokens (
-  user_id, token
+  id, user_id, token, expires_at
 ) VALUES (
-  $1, $2
+  $1, $2, $3, $4
 )
 RETURNING *;
 
