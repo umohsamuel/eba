@@ -36,7 +36,7 @@ func (s *RefreshService) Create(ctx context.Context, _refreshToken *refreshtoken
 		Token:  _refreshToken.Token,
 	})
 	if err != nil {
-		return nil, domainErrors.ErrInternal
+		return nil, err
 	}
 
 	return createdToken, nil
@@ -49,7 +49,7 @@ func (s *RefreshService) GetByID(ctx context.Context, id uuid.UUID) (*refreshtok
 
 	token, err := s.refreshToken.GetByID(ctx, id)
 	if err != nil {
-		return nil, domainErrors.ErrInternal
+		return nil, err
 	}
 
 	return token, nil
@@ -62,7 +62,7 @@ func (s *RefreshService) Revoke(ctx context.Context, id uuid.UUID) (*uuid.UUID, 
 
 	revokedToken, err := s.refreshToken.Revoke(ctx, id)
 	if err != nil {
-		return nil, domainErrors.ErrInternal
+		return nil, err
 	}
 
 	return revokedToken, nil
