@@ -1,7 +1,10 @@
 package gin
 
 import (
+	"errors"
+	"log/slog"
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	apperror "github.com/umohsamuel/eba/pkg/errors"
@@ -32,15 +35,50 @@ type GinResponder[T any] struct {
 }
 
 func HandleError(c *gin.Context, err error) GinResponder[any] {
-	kind := apperror.ErrorKind(err)
+	kind := apperror.KindInternal
+	message := "internal server error"
+
+	if appErr, ok := apperror.AsAppError(err); ok {
+		kind = appErr.Kind
+		message = appErr.Message
+	}
 
 	statusCode := mapErrorKindToHTTP(kind)
+
+	// Full error chain goes to the logs, never to the client.
+	level := slog.LevelWarn
+	if statusCode >= http.StatusInternalServerError {
+		level = slog.LevelError
+	}
+
+	slog.Log(c.Request.Context(), level, "request failed",
+		"method", c.Request.Method,
+		"path", c.FullPath(),
+		"status", statusCode,
+		"kind", kind,
+		"error", errorChain(err),
+	)
 
 	return GinResponder[any]{
 		ctx:        c,
 		statusCode: statusCode,
-		envelope:   response.BuildError(string(kind), err.Error()),
+		envelope:   response.BuildError(string(kind), message),
 	}
+}
+
+// errorChain renders the full error for logging. *apperror.Error.Error()
+// returns only its client-safe Message, it walk through each *apperror.Error
+// and append its Cause. A non-apperror error's Error() already includes
+// everything it wraps, so it stops there.
+func errorChain(err error) string {
+	var parts []string
+	for e := err; e != nil; e = errors.Unwrap(e) {
+		parts = append(parts, e.Error())
+		if _, ok := e.(*apperror.Error); !ok {
+			break
+		}
+	}
+	return strings.Join(parts, ": ")
 }
 
 func HandleSuccess[T any](c *gin.Context, statusCode int, data T, message string) GinResponder[T] {
