@@ -18,6 +18,11 @@ var (
 		"user not found",
 	)
 
+	ErrRefreshTokenNotFound = apperror.New(
+		apperror.KindNotFound,
+		"refresh token not found",
+	)
+
 	ErrEmailAlreadyExists = apperror.New(
 		apperror.KindConflict,
 		"email already registered",
