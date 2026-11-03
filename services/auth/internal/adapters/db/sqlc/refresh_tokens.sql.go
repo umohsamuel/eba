@@ -7,26 +7,34 @@ package sqlc
 
 import (
 	"context"
+	"time"
 
 	"github.com/google/uuid"
 )
 
 const createRefreshToken = `-- name: CreateRefreshToken :one
 INSERT INTO refresh_tokens (
-  user_id, token
+  id, user_id, token, expires_at
 ) VALUES (
-  $1, $2
+  $1, $2, $3, $4
 )
 RETURNING id, user_id, token, expires_at, created_at, revoked
 `
 
 type CreateRefreshTokenParams struct {
-	UserID uuid.UUID
-	Token  string
+	ID        uuid.UUID
+	UserID    uuid.UUID
+	Token     string
+	ExpiresAt time.Time
 }
 
 func (q *Queries) CreateRefreshToken(ctx context.Context, arg CreateRefreshTokenParams) (RefreshToken, error) {
-	row := q.db.QueryRowContext(ctx, createRefreshToken, arg.UserID, arg.Token)
+	row := q.db.QueryRowContext(ctx, createRefreshToken,
+		arg.ID,
+		arg.UserID,
+		arg.Token,
+		arg.ExpiresAt,
+	)
 	var i RefreshToken
 	err := row.Scan(
 		&i.ID,
