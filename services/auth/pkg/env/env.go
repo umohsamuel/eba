@@ -10,6 +10,8 @@ import (
 type Env struct {
 	Port          int    `env:"PORT" envDefault:"8080"`
 	CLIENT_ORIGIN string `env:"CLIENT_ORIGIN"`
+	AppEnv        string `env:"APP_ENV" envDefault:"development"`
+	LogLevel      string `env:"LOG_LEVEL" envDefault:"info"`
 	DB            PostgresEnv
 	JWT           JWTEnv
 }
