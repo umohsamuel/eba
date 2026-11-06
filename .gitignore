@@ -4,3 +4,5 @@ go.work.sum
 .env.*
 .env.*.local
 **/services/*/.env
+*.exe
+services/*/tmp/
