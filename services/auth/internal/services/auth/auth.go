@@ -83,13 +83,13 @@ func (s *AuthService) Register(
 const dummyHash = "$2a$10$xK9vG/5F7y8Kz7v9B6h2u.D8r1e2f3g4h5i6j7k8l9m0n1o2p3q4r"
 
 type TokenConfig struct {
-	AccessToken  string
-	RefreshToken string
+	AccessToken  string `json:"access_token"`
+	RefreshToken string `json:"refresh_token"`
 }
 
 type LoginResponse struct {
-	User  *user.User
-	Token *TokenConfig
+	User  *user.User   `json:"user"`
+	Token *TokenConfig `json:"token"`
 }
 
 func (s *AuthService) Login(

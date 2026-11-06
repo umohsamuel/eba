@@ -12,6 +12,10 @@ build:
 # Run the application
 run:
 	@go run cmd/main.go
+# Generate Swagger docs
+docs:
+	@swag init -g internal/adapters/transport/http/http.go -o docs --parseDependency --parseInternal
+
 # Create DB container
 docker-run:
 	@docker compose up --build
@@ -37,4 +41,4 @@ watch:
 		Write-Output 'Watching...'; \
 	}"
 
-.PHONY: all build run test clean watch docker-run docker-down itest
+.PHONY: all build run test clean watch docker-run docker-down itest docs

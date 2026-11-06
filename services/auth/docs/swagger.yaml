@@ -1,0 +1,177 @@
+basePath: /api/v1
+definitions:
+  github_com_umohsamuel_eba_services_auth_internal_domain_user.User:
+    properties:
+      email:
+        type: string
+      id:
+        type: string
+    type: object
+  github_com_umohsamuel_eba_services_auth_internal_services_auth.LoginResponse:
+    properties:
+      token:
+        $ref: '#/definitions/github_com_umohsamuel_eba_services_auth_internal_services_auth.TokenConfig'
+      user:
+        $ref: '#/definitions/github_com_umohsamuel_eba_services_auth_internal_domain_user.User'
+    type: object
+  github_com_umohsamuel_eba_services_auth_internal_services_auth.TokenConfig:
+    properties:
+      access_token:
+        type: string
+      refresh_token:
+        type: string
+    type: object
+  internal_adapters_transport_http_handlers.loginRequest:
+    properties:
+      email:
+        type: string
+      password:
+        type: string
+    type: object
+  internal_adapters_transport_http_handlers.registerRequest:
+    properties:
+      email:
+        type: string
+      password:
+        type: string
+    type: object
+  response.APIError:
+    properties:
+      code:
+        type: string
+      message:
+        type: string
+    type: object
+  response.Envelope-any:
+    properties:
+      data: {}
+      error:
+        $ref: '#/definitions/response.APIError'
+      message:
+        type: string
+      meta:
+        $ref: '#/definitions/response.Meta'
+      status:
+        type: string
+    type: object
+  response.Envelope-github_com_umohsamuel_eba_services_auth_internal_domain_user_User:
+    properties:
+      data:
+        $ref: '#/definitions/github_com_umohsamuel_eba_services_auth_internal_domain_user.User'
+      error:
+        $ref: '#/definitions/response.APIError'
+      message:
+        type: string
+      meta:
+        $ref: '#/definitions/response.Meta'
+      status:
+        type: string
+    type: object
+  response.Envelope-github_com_umohsamuel_eba_services_auth_internal_services_auth_LoginResponse:
+    properties:
+      data:
+        $ref: '#/definitions/github_com_umohsamuel_eba_services_auth_internal_services_auth.LoginResponse'
+      error:
+        $ref: '#/definitions/response.APIError'
+      message:
+        type: string
+      meta:
+        $ref: '#/definitions/response.Meta'
+      status:
+        type: string
+    type: object
+  response.Meta:
+    properties:
+      pagination:
+        $ref: '#/definitions/response.Pagination'
+      request_id:
+        type: string
+    type: object
+  response.Pagination:
+    properties:
+      limit:
+        type: integer
+      page:
+        type: integer
+      total:
+        type: integer
+      total_pages:
+        type: integer
+    type: object
+info:
+  contact: {}
+  description: This is the auth service for EBA.
+  title: Auth Service
+  version: "1.0"
+paths:
+  /auth/login:
+    post:
+      consumes:
+      - application/json
+      description: Authenticates a user and returns access and refresh tokens.
+      parameters:
+      - description: Login credentials
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_adapters_transport_http_handlers.loginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Envelope-github_com_umohsamuel_eba_services_auth_internal_services_auth_LoginResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.Envelope-any'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.Envelope-any'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/response.Envelope-any'
+      summary: Log in
+      tags:
+      - auth
+  /auth/register:
+    post:
+      consumes:
+      - application/json
+      description: Creates a user account with an email and password.
+      parameters:
+      - description: Registration details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_adapters_transport_http_handlers.registerRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/response.Envelope-github_com_umohsamuel_eba_services_auth_internal_domain_user_User'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.Envelope-any'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/response.Envelope-any'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/response.Envelope-any'
+      summary: Register a new user
+      tags:
+      - auth
+schemes:
+- http
+swagger: "2.0"
