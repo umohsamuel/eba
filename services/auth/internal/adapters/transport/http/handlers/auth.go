@@ -4,9 +4,12 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	_ "github.com/umohsamuel/eba/pkg/response" // referenced by swag annotations
 	ginresponse "github.com/umohsamuel/eba/pkg/response/gin"
 	domainerrors "github.com/umohsamuel/eba/services/auth/internal/domain/errors"
+	_ "github.com/umohsamuel/eba/services/auth/internal/domain/user" // referenced by swag annotations
 	"github.com/umohsamuel/eba/services/auth/internal/services"
+	_ "github.com/umohsamuel/eba/services/auth/internal/services/auth" // referenced by swag annotations
 )
 
 type AuthHandler struct {
@@ -30,6 +33,19 @@ type registerRequest struct {
 	Password string `json:"password"`
 }
 
+// Register godoc
+//
+//	@Summary		Register a new user
+//	@Description	Creates a user account with an email and password.
+//	@Tags			auth
+//	@Accept			json
+//	@Produce		json
+//	@Param			request	body		registerRequest							true	"Registration details"
+//	@Success		201		{object}	response.Envelope[user.User]
+//	@Failure		400		{object}	response.Envelope[any]
+//	@Failure		409		{object}	response.Envelope[any]
+//	@Failure		500		{object}	response.Envelope[any]
+//	@Router			/auth/register [post]
 func (h *AuthHandler) Register(c *gin.Context) {
 	var req registerRequest
 
@@ -52,6 +68,19 @@ type loginRequest struct {
 	Password string `json:"password"`
 }
 
+// Login godoc
+//
+//	@Summary		Log in
+//	@Description	Authenticates a user and returns access and refresh tokens.
+//	@Tags			auth
+//	@Accept			json
+//	@Produce		json
+//	@Param			request	body		loginRequest							true	"Login credentials"
+//	@Success		200		{object}	response.Envelope[auth.LoginResponse]
+//	@Failure		400		{object}	response.Envelope[any]
+//	@Failure		401		{object}	response.Envelope[any]
+//	@Failure		500		{object}	response.Envelope[any]
+//	@Router			/auth/login [post]
 func (h *AuthHandler) Login(c *gin.Context) {
 	var req loginRequest
 
