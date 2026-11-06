@@ -1,0 +1,44 @@
+# Simple Makefile for a Go project
+
+# Build the application
+# all: build test
+
+build:
+	@echo "Building..."
+	
+	
+	@go build -o main.exe cmd/main.go
+
+# Run the application
+run:
+	@go run cmd/main.go
+# Generate Swagger docs
+docs:
+	@swag init -g internal/adapters/transport/http/http.go -o docs --parseDependency --parseInternal
+
+# Create DB container
+docker-run:
+	@docker compose up --build
+
+# Shutdown DB container
+docker-down:
+	@docker compose down
+
+# Clean the binary
+clean:
+	@echo "Cleaning..."
+	@rm -f main
+
+# Live Reload
+watch:
+	@powershell -ExecutionPolicy Bypass -Command "if (Get-Command air -ErrorAction SilentlyContinue) { \
+		air; \
+		Write-Output 'Watching...'; \
+	} else { \
+		Write-Output 'Installing air...'; \
+		go install github.com/air-verse/air@latest; \
+		air; \
+		Write-Output 'Watching...'; \
+	}"
+
+.PHONY: all build run test clean watch docker-run docker-down itest docs
