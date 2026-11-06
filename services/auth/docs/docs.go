@@ -67,6 +67,58 @@ const docTemplate = `{
                 }
             }
         },
+        "/auth/refresh": {
+            "post": {
+                "description": "Exchanges a valid refresh token for a new access token.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Refresh access token",
+                "parameters": [
+                    {
+                        "description": "Refresh token",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_adapters_transport_http_handlers.refreshRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Envelope-github_com_umohsamuel_eba_services_auth_internal_services_auth_TokenConfig"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Envelope-any"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/response.Envelope-any"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Envelope-any"
+                        }
+                    }
+                }
+            }
+        },
         "/auth/register": {
             "post": {
                 "description": "Creates a user account with an email and password.",
@@ -165,6 +217,14 @@ const docTemplate = `{
                 }
             }
         },
+        "internal_adapters_transport_http_handlers.refreshRequest": {
+            "type": "object",
+            "properties": {
+                "refresh_token": {
+                    "type": "string"
+                }
+            }
+        },
         "internal_adapters_transport_http_handlers.registerRequest": {
             "type": "object",
             "properties": {
@@ -230,6 +290,26 @@ const docTemplate = `{
             "properties": {
                 "data": {
                     "$ref": "#/definitions/github_com_umohsamuel_eba_services_auth_internal_services_auth.LoginResponse"
+                },
+                "error": {
+                    "$ref": "#/definitions/response.APIError"
+                },
+                "message": {
+                    "type": "string"
+                },
+                "meta": {
+                    "$ref": "#/definitions/response.Meta"
+                },
+                "status": {
+                    "type": "string"
+                }
+            }
+        },
+        "response.Envelope-github_com_umohsamuel_eba_services_auth_internal_services_auth_TokenConfig": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/github_com_umohsamuel_eba_services_auth_internal_services_auth.TokenConfig"
                 },
                 "error": {
                     "$ref": "#/definitions/response.APIError"

@@ -25,6 +25,7 @@ func (h *AuthHandler) RegisterRoutes(rg *gin.RouterGroup) {
 	{
 		authGroup.POST("/register", h.Register)
 		authGroup.POST("/login", h.Login)
+		authGroup.POST("/refresh", h.Refresh)
 	}
 }
 
@@ -96,4 +97,38 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	}
 
 	ginresponse.HandleSuccess(c, http.StatusOK, loginResponse, "success").Send()
+}
+
+type refreshRequest struct {
+	RefreshToken string `json:"refresh_token"`
+}
+
+// Refresh godoc
+//
+//	@Summary		Refresh access token
+//	@Description	Exchanges a valid refresh token for a new access token.
+//	@Tags			auth
+//	@Accept			json
+//	@Produce		json
+//	@Param			request	body		refreshRequest							true	"Refresh token"
+//	@Success		200		{object}	response.Envelope[auth.TokenConfig]
+//	@Failure		400		{object}	response.Envelope[any]
+//	@Failure		401		{object}	response.Envelope[any]
+//	@Failure		500		{object}	response.Envelope[any]
+//	@Router			/auth/refresh [post]
+func (h *AuthHandler) Refresh(c *gin.Context) {
+	var req refreshRequest
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		ginresponse.HandleError(c, domainerrors.ErrBadRequest.Wrap(err)).Send()
+		return
+	}
+
+	refreshResponse, err := h.services.Auth.RefreshAccessToken(c, req.RefreshToken)
+	if err != nil {
+		ginresponse.HandleError(c, err).Send()
+		return
+	}
+
+	ginresponse.HandleSuccess(c, http.StatusOK, refreshResponse, "success").Send()
 }

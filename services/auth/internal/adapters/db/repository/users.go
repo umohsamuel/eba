@@ -118,7 +118,6 @@ func (r *UserRepositoryAdapter) Update(ctx context.Context, _user *user.User) (*
 		PasswordHash: existingUser.PasswordHash,
 	})
 	if err != nil {
-		// ErrNoRows here means the user was deleted between the read and the update.
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, domainerrors.ErrUserNotFound.Wrap(err)
 		}

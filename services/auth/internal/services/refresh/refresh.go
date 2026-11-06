@@ -32,8 +32,11 @@ func (s *RefreshService) Create(ctx context.Context, _refreshToken *refreshtoken
 	}
 
 	createdToken, err := s.refreshToken.Create(ctx, &refreshtoken.RefreshToken{
+		ID:        _refreshToken.ID,
 		UserID:    _refreshToken.UserID,
 		TokenHash: _refreshToken.TokenHash,
+		ExpiresAt: _refreshToken.ExpiresAt,
+		Revoked:   _refreshToken.Revoked,
 	})
 	if err != nil {
 		return nil, err
