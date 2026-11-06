@@ -8,6 +8,11 @@ import (
 	"github.com/umohsamuel/eba/services/auth/internal/domain/user"
 )
 
+var (
+	ErrTokenExpired = errors.New("token expired")
+	ErrTokenInvalid = errors.New("token invalid")
+)
+
 type TokenManager struct {
 	issuer string
 
@@ -83,44 +88,29 @@ func (m *TokenManager) GenerateRefreshToken(user user.User, refreshTokenId strin
 	return tokenString, nil
 }
 
-func (m *TokenManager) ValidateAccessToken(tokenString string) (jwt.MapClaims, error) {
-	token, err := jwt.Parse(tokenString, func(t *jwt.Token) (interface{}, error) {
-		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
-			return nil, errors.New("invalid token")
-		}
-		return m.accessSecret, nil
-	})
-
-	if err != nil {
-		if errors.Is(err, jwt.ErrTokenExpired) {
-			return nil, errors.New("token expired")
-		}
-		return nil, errors.New("invalid token")
-	}
-
-	if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
-		return claims, nil
-	}
-	return nil, errors.New("invalid token")
+func (m *TokenManager) ValidateAccessToken(tokenString string) (*CustomClaims, error) {
+	return m.parse(tokenString, m.accessSecret, m.accessAudience)
 }
 
-func (m *TokenManager) ValidateRefreshToken(tokenString string) (jwt.MapClaims, error) {
-	token, err := jwt.Parse(tokenString, func(t *jwt.Token) (interface{}, error) {
-		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
-			return nil, errors.New("invalid token")
-		}
-		return m.refreshSecret, nil
-	})
+func (m *TokenManager) ValidateRefreshToken(tokenString string) (*CustomClaims, error) {
+	return m.parse(tokenString, m.refreshSecret, m.refreshAudience)
+}
+
+func (m *TokenManager) parse(tokenString string, secret []byte, audience []string) (*CustomClaims, error) {
+	claims := &CustomClaims{}
+	_, err := jwt.ParseWithClaims(tokenString, claims,
+		func(*jwt.Token) (interface{}, error) { return secret, nil },
+		jwt.WithValidMethods([]string{jwt.SigningMethodHS256.Alg()}),
+		jwt.WithIssuer(m.issuer),
+		jwt.WithAudience(audience[0]),
+		jwt.WithExpirationRequired(),
+	)
 
 	if err != nil {
 		if errors.Is(err, jwt.ErrTokenExpired) {
-			return nil, errors.New("token expired")
+			return nil, ErrTokenExpired
 		}
-		return nil, errors.New("invalid token")
+		return nil, ErrTokenInvalid
 	}
-
-	if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
-		return claims, nil
-	}
-	return nil, errors.New("invalid token")
+	return claims, nil
 }

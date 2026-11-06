@@ -69,8 +69,6 @@ func (s *AuthService) Register(
 		PasswordHash: passwordHash,
 	}
 
-	// The repository returns domain errors: ErrEmailAlreadyExists if a
-	// concurrent request registered the same email first, ErrInternal otherwise.
 	createdUser, err := s.users.Create(ctx, newUser)
 	if err != nil {
 		return nil, err
@@ -142,6 +140,7 @@ func (s *AuthService) Login(
 		UserID:    u.ID,
 		TokenHash: hash.HashToken(rawRefreshToken),
 		ExpiresAt: expiresAt,
+		Revoked:   false,
 	})
 	if err != nil {
 		return nil, err
@@ -153,5 +152,54 @@ func (s *AuthService) Login(
 			AccessToken:  accessToken,
 			RefreshToken: rawRefreshToken,
 		},
+	}, nil
+}
+
+func (s *AuthService) RefreshAccessToken(
+	ctx context.Context,
+	refreshToken string,
+) (*TokenConfig, error) {
+	claims, err := s.tokenManager.ValidateRefreshToken(refreshToken)
+	if err != nil {
+		if stderrors.Is(err, token.ErrTokenExpired) {
+			return nil, errors.ErrTokenExpired.Wrap(err)
+		}
+		return nil, errors.ErrTokenInvalid.Wrap(err)
+	}
+
+	id, err := uuid.Parse(claims.ID)
+	if err != nil {
+		return nil, errors.ErrTokenInvalid.Wrap(err)
+	}
+
+	row, err := s.refreshToken.GetByID(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+
+	if row.Revoked || time.Now().After(row.ExpiresAt) {
+		return nil, errors.ErrTokenInvalid
+	}
+
+	if isValid := hash.VerifyToken(refreshToken, row.TokenHash); !isValid {
+		return nil, errors.ErrTokenInvalid
+	}
+
+	u, err := s.users.GetByID(ctx, row.UserID)
+	if err != nil {
+		if stderrors.Is(err, errors.ErrUserNotFound) {
+			return nil, errors.ErrTokenInvalid.Wrap(err)
+		}
+		return nil, err
+	}
+
+	accessToken, err := s.tokenManager.GenerateAccessToken(*u, 15*time.Minute)
+	if err != nil {
+		return nil, errors.ErrInternal.Wrap(err)
+	}
+
+	return &TokenConfig{
+		AccessToken:  accessToken,
+		RefreshToken: refreshToken,
 	}, nil
 }

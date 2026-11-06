@@ -23,6 +23,9 @@ var (
 		"refresh token not found",
 	)
 
+	ErrTokenExpired = apperror.New(apperror.KindUnauthorized, "token expired")
+	ErrTokenInvalid = apperror.New(apperror.KindUnauthorized, "invalid token")
+
 	ErrEmailAlreadyExists = apperror.New(
 		apperror.KindConflict,
 		"email already registered",

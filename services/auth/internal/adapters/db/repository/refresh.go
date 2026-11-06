@@ -48,7 +48,7 @@ func (r *RefreshRepositoryAdapter) GetByID(ctx context.Context, id uuid.UUID) (*
 	token, err := r.queries.GetRefreshToken(ctx, id)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, domainerrors.ErrRefreshTokenNotFound.Wrap(err)
+			return nil, domainerrors.ErrTokenInvalid.Wrap(err)
 		}
 		return nil, domainerrors.ErrInternal.Wrap(err)
 	}
@@ -58,6 +58,7 @@ func (r *RefreshRepositoryAdapter) GetByID(ctx context.Context, id uuid.UUID) (*
 		UserID:    token.UserID,
 		TokenHash: token.TokenHash,
 		Revoked:   token.Revoked,
+		ExpiresAt: token.ExpiresAt,
 	}, nil
 }
 
