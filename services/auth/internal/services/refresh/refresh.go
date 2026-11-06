@@ -27,13 +27,13 @@ func NewRefreshService(deps Config) *RefreshService {
 }
 
 func (s *RefreshService) Create(ctx context.Context, _refreshToken *refreshtoken.RefreshToken) (*refreshtoken.RefreshToken, error) {
-	if _refreshToken == nil || _refreshToken.UserID == uuid.Nil || _refreshToken.Token == "" {
+	if _refreshToken == nil || _refreshToken.UserID == uuid.Nil || _refreshToken.TokenHash == "" {
 		return nil, domainErrors.ErrBadRequest
 	}
 
 	createdToken, err := s.refreshToken.Create(ctx, &refreshtoken.RefreshToken{
-		UserID: _refreshToken.UserID,
-		Token:  _refreshToken.Token,
+		UserID:    _refreshToken.UserID,
+		TokenHash: _refreshToken.TokenHash,
 	})
 	if err != nil {
 		return nil, err

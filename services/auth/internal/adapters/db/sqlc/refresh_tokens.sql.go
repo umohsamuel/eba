@@ -14,17 +14,17 @@ import (
 
 const createRefreshToken = `-- name: CreateRefreshToken :one
 INSERT INTO refresh_tokens (
-  id, user_id, token, expires_at
+  id, user_id, token_hash, expires_at
 ) VALUES (
   $1, $2, $3, $4
 )
-RETURNING id, user_id, token, expires_at, created_at, revoked
+RETURNING id, user_id, token_hash, expires_at, created_at, revoked
 `
 
 type CreateRefreshTokenParams struct {
 	ID        uuid.UUID
 	UserID    uuid.UUID
-	Token     string
+	TokenHash string
 	ExpiresAt time.Time
 }
 
@@ -32,14 +32,14 @@ func (q *Queries) CreateRefreshToken(ctx context.Context, arg CreateRefreshToken
 	row := q.db.QueryRowContext(ctx, createRefreshToken,
 		arg.ID,
 		arg.UserID,
-		arg.Token,
+		arg.TokenHash,
 		arg.ExpiresAt,
 	)
 	var i RefreshToken
 	err := row.Scan(
 		&i.ID,
 		&i.UserID,
-		&i.Token,
+		&i.TokenHash,
 		&i.ExpiresAt,
 		&i.CreatedAt,
 		&i.Revoked,
@@ -61,7 +61,7 @@ func (q *Queries) DeleteRefreshToken(ctx context.Context, id uuid.UUID) (uuid.UU
 }
 
 const getRefreshToken = `-- name: GetRefreshToken :one
-SELECT id, user_id, token, expires_at, created_at, revoked FROM refresh_tokens
+SELECT id, user_id, token_hash, expires_at, created_at, revoked FROM refresh_tokens
 WHERE id = $1 LIMIT 1
 `
 
@@ -71,7 +71,7 @@ func (q *Queries) GetRefreshToken(ctx context.Context, id uuid.UUID) (RefreshTok
 	err := row.Scan(
 		&i.ID,
 		&i.UserID,
-		&i.Token,
+		&i.TokenHash,
 		&i.ExpiresAt,
 		&i.CreatedAt,
 		&i.Revoked,
@@ -80,7 +80,7 @@ func (q *Queries) GetRefreshToken(ctx context.Context, id uuid.UUID) (RefreshTok
 }
 
 const listRefreshTokens = `-- name: ListRefreshTokens :many
-SELECT id, user_id, token, expires_at, created_at, revoked FROM refresh_tokens
+SELECT id, user_id, token_hash, expires_at, created_at, revoked FROM refresh_tokens
 `
 
 func (q *Queries) ListRefreshTokens(ctx context.Context) ([]RefreshToken, error) {
@@ -95,7 +95,7 @@ func (q *Queries) ListRefreshTokens(ctx context.Context) ([]RefreshToken, error)
 		if err := rows.Scan(
 			&i.ID,
 			&i.UserID,
-			&i.Token,
+			&i.TokenHash,
 			&i.ExpiresAt,
 			&i.CreatedAt,
 			&i.Revoked,
@@ -117,7 +117,7 @@ const revokeRefreshToken = `-- name: RevokeRefreshToken :one
 UPDATE refresh_tokens
 SET revoked = $2
 WHERE id = $1
-RETURNING id, user_id, token, expires_at, created_at, revoked
+RETURNING id, user_id, token_hash, expires_at, created_at, revoked
 `
 
 type RevokeRefreshTokenParams struct {
@@ -131,7 +131,7 @@ func (q *Queries) RevokeRefreshToken(ctx context.Context, arg RevokeRefreshToken
 	err := row.Scan(
 		&i.ID,
 		&i.UserID,
-		&i.Token,
+		&i.TokenHash,
 		&i.ExpiresAt,
 		&i.CreatedAt,
 		&i.Revoked,
