@@ -7,7 +7,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/umohsamuel/eba/services/auth/internal/adapters/db/sqlc"
-	domainErrors "github.com/umohsamuel/eba/services/auth/internal/domain/errors"
+	domainerrors "github.com/umohsamuel/eba/services/auth/internal/domain/errors"
 	"github.com/umohsamuel/eba/services/auth/internal/domain/refreshtoken"
 )
 
@@ -29,14 +29,14 @@ func (r *RefreshRepositoryAdapter) Create(ctx context.Context, _refreshToken *re
 	createdToken, err := r.queries.CreateRefreshToken(ctx, sqlc.CreateRefreshTokenParams{
 		ID:        _refreshToken.ID,
 		UserID:    _refreshToken.UserID,
-		Token:     _refreshToken.Token,
+		TokenHash: _refreshToken.TokenHash,
 		ExpiresAt: _refreshToken.ExpiresAt,
 	})
 	if err != nil {
 		if isForeignKeyViolation(err) {
-			return nil, domainErrors.ErrUserNotFound.Wrap(err)
+			return nil, domainerrors.ErrUserNotFound.Wrap(err)
 		}
-		return nil, domainErrors.ErrInternal.Wrap(err)
+		return nil, domainerrors.ErrInternal.Wrap(err)
 	}
 
 	_refreshToken.Revoked = createdToken.Revoked
@@ -48,16 +48,16 @@ func (r *RefreshRepositoryAdapter) GetByID(ctx context.Context, id uuid.UUID) (*
 	token, err := r.queries.GetRefreshToken(ctx, id)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, domainErrors.ErrRefreshTokenNotFound
+			return nil, domainerrors.ErrRefreshTokenNotFound.Wrap(err)
 		}
-		return nil, domainErrors.ErrInternal.Wrap(err)
+		return nil, domainerrors.ErrInternal.Wrap(err)
 	}
 
 	return &refreshtoken.RefreshToken{
-		ID:      token.ID,
-		UserID:  token.UserID,
-		Token:   token.Token,
-		Revoked: token.Revoked,
+		ID:        token.ID,
+		UserID:    token.UserID,
+		TokenHash: token.TokenHash,
+		Revoked:   token.Revoked,
 	}, nil
 }
 
@@ -68,11 +68,11 @@ func (r *RefreshRepositoryAdapter) Revoke(ctx context.Context, id uuid.UUID) (*u
 	})
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, domainErrors.ErrRefreshTokenNotFound
+			return nil, domainerrors.ErrRefreshTokenNotFound.Wrap(err)
 		}
-		return nil, domainErrors.ErrInternal.Wrap(err)
+		return nil, domainerrors.ErrInternal.Wrap(err)
 	}
 
-	return &revokedToken.ID, err
+	return &revokedToken.ID, nil
 
 }

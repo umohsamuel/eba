@@ -132,26 +132,26 @@ func (s *AuthService) Login(
 	issuedAt := time.Now().UTC().Truncate(time.Second)
 	expiresAt := issuedAt.Add(7 * 24 * time.Hour)
 
-	refershToken, err := s.tokenManager.GenerateRefreshToken(*u, id.String(), issuedAt, expiresAt)
+	rawRefreshToken, err := s.tokenManager.GenerateRefreshToken(*u, id.String(), issuedAt, expiresAt)
 	if err != nil {
 		return nil, errors.ErrInternal.Wrap(err)
 	}
 
-	createdRefreshToken, err := s.refreshToken.Create(ctx, &refreshtoken.RefreshToken{
+	_, err = s.refreshToken.Create(ctx, &refreshtoken.RefreshToken{
 		ID:        id,
 		UserID:    u.ID,
-		Token:     refershToken,
+		TokenHash: hash.HashToken(rawRefreshToken),
 		ExpiresAt: expiresAt,
 	})
 	if err != nil {
-		return nil, errors.ErrInternal.Wrap(err)
+		return nil, err
 	}
 
 	return &LoginResponse{
 		User: u,
 		Token: &TokenConfig{
 			AccessToken:  accessToken,
-			RefreshToken: createdRefreshToken.Token,
+			RefreshToken: rawRefreshToken,
 		},
 	}, nil
 }

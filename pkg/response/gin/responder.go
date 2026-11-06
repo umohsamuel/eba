@@ -4,7 +4,9 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
+	"runtime"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	apperror "github.com/umohsamuel/eba/pkg/errors"
@@ -51,19 +53,41 @@ func HandleError(c *gin.Context, err error) GinResponder[any] {
 		level = slog.LevelError
 	}
 
-	slog.Log(c.Request.Context(), level, "request failed",
-		"method", c.Request.Method,
-		"path", c.FullPath(),
-		"status", statusCode,
-		"kind", kind,
-		"error", errorChain(err),
-	)
+	logRequestError(c, level, statusCode, kind, err)
 
 	return GinResponder[any]{
 		ctx:        c,
 		statusCode: statusCode,
 		envelope:   response.BuildError(string(kind), message),
 	}
+}
+
+// logRequestError logs a failed request with its source set to the caller of
+// HandleError (the handler) rather than this package, and adds the error's
+// origin when one was recorded by apperror.Wrap.
+func logRequestError(c *gin.Context, level slog.Level, statusCode int, kind apperror.Kind, err error) {
+	ctx := c.Request.Context()
+	logger := slog.Default()
+	if !logger.Enabled(ctx, level) {
+		return
+	}
+
+	var pcs [1]uintptr
+	runtime.Callers(3, pcs[:]) // skip runtime.Callers, logRequestError and HandleError
+
+	record := slog.NewRecord(time.Now(), level, "request failed", pcs[0])
+	record.Add(
+		"method", c.Request.Method,
+		"path", c.FullPath(),
+		"status", statusCode,
+		"kind", kind,
+		"error", errorChain(err),
+	)
+	if origin := apperror.Origin(err); origin != "" {
+		record.Add("origin", origin)
+	}
+
+	_ = logger.Handler().Handle(ctx, record)
 }
 
 // errorChain renders the full error for logging. *apperror.Error.Error()
