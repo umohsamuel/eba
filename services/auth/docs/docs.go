@@ -17,7 +17,7 @@ const docTemplate = `{
     "paths": {
         "/auth/login": {
             "post": {
-                "description": "Authenticates a user and returns access and refresh tokens.",
+                "description": "Authenticates a user. Web clients (default) receive the tokens as HttpOnly cookies and only\ntheir expiry times in the body. Clients sending X-Client-Type: mobile receive the tokens in\nthe body and no cookies.",
                 "consumes": [
                     "application/json"
                 ],
@@ -29,6 +29,16 @@ const docTemplate = `{
                 ],
                 "summary": "Log in",
                 "parameters": [
+                    {
+                        "enum": [
+                            "web",
+                            "mobile"
+                        ],
+                        "type": "string",
+                        "description": "Client type",
+                        "name": "X-Client-Type",
+                        "in": "header"
+                    },
                     {
                         "description": "Login credentials",
                         "name": "request",
@@ -69,7 +79,7 @@ const docTemplate = `{
         },
         "/auth/refresh": {
             "post": {
-                "description": "Exchanges a valid refresh token for a new access token.",
+                "description": "Exchanges a valid refresh token for a new access token. Web clients (default) send no body;\nthe refresh token is read from its cookie and the new access token is set as a cookie.\nClients sending X-Client-Type: mobile send the refresh token in the body and receive the\ntokens in the response.",
                 "consumes": [
                     "application/json"
                 ],
@@ -82,10 +92,19 @@ const docTemplate = `{
                 "summary": "Refresh access token",
                 "parameters": [
                     {
-                        "description": "Refresh token",
+                        "enum": [
+                            "web",
+                            "mobile"
+                        ],
+                        "type": "string",
+                        "description": "Client type",
+                        "name": "X-Client-Type",
+                        "in": "header"
+                    },
+                    {
+                        "description": "Refresh token (mobile clients only)",
                         "name": "request",
                         "in": "body",
-                        "required": true,
                         "schema": {
                             "$ref": "#/definitions/internal_adapters_transport_http_handlers.refreshRequest"
                         }
