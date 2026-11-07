@@ -81,9 +81,9 @@ func (s *AuthService) Register(
 const dummyHash = "$2a$10$xK9vG/5F7y8Kz7v9B6h2u.D8r1e2f3g4h5i6j7k8l9m0n1o2p3q4r"
 
 type TokenConfig struct {
-	AccessToken           string    `json:"access_token"`
+	AccessToken           string    `json:"access_token,omitempty"`
 	AccessTokenExpiresAt  time.Time `json:"access_token_expires_at"`
-	RefreshToken          string    `json:"refresh_token"`
+	RefreshToken          string    `json:"refresh_token,omitempty"`
 	RefreshTokenExpiresAt time.Time `json:"refresh_token_expires_at"`
 }
 

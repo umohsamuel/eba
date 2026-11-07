@@ -130,8 +130,18 @@ paths:
     post:
       consumes:
       - application/json
-      description: Authenticates a user and returns access and refresh tokens.
+      description: |-
+        Authenticates a user. Web clients (default) receive the tokens as HttpOnly cookies and only
+        their expiry times in the body. Clients sending X-Client-Type: mobile receive the tokens in
+        the body and no cookies.
       parameters:
+      - description: Client type
+        enum:
+        - web
+        - mobile
+        in: header
+        name: X-Client-Type
+        type: string
       - description: Login credentials
         in: body
         name: request
@@ -164,12 +174,22 @@ paths:
     post:
       consumes:
       - application/json
-      description: Exchanges a valid refresh token for a new access token.
+      description: |-
+        Exchanges a valid refresh token for a new access token. Web clients (default) send no body;
+        the refresh token is read from its cookie and the new access token is set as a cookie.
+        Clients sending X-Client-Type: mobile send the refresh token in the body and receive the
+        tokens in the response.
       parameters:
-      - description: Refresh token
+      - description: Client type
+        enum:
+        - web
+        - mobile
+        in: header
+        name: X-Client-Type
+        type: string
+      - description: Refresh token (mobile clients only)
         in: body
         name: request
-        required: true
         schema:
           $ref: '#/definitions/internal_adapters_transport_http_handlers.refreshRequest'
       produces:
