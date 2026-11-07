@@ -1,11 +1,7 @@
-# Build from the repo root so the shared pkg modules are in the context:
-#   docker build -f services/api/Dockerfile .
 FROM golang:1.27-alpine AS build
 
 WORKDIR /src
 
-# Shared modules and dependency manifests first, so the download layer is
-# only rebuilt when dependencies change.
 COPY pkg/ pkg/
 COPY services/api/go.mod services/api/go.sum services/api/
 

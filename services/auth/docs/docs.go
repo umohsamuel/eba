@@ -189,9 +189,372 @@ const docTemplate = `{
                     }
                 }
             }
+        },
+        "/migrations/down": {
+            "post": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "migrations"
+                ],
+                "summary": "Roll back the latest applied migration",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Migration token",
+                        "name": "X-Migration-Token",
+                        "in": "header",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Envelope-array_github_com_umohsamuel_eba_services_auth_internal_adapters_db_migrations_Result"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/response.Envelope-any"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/response.Envelope-any"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Envelope-any"
+                        }
+                    }
+                }
+            }
+        },
+        "/migrations/down-to/{version}": {
+            "post": {
+                "description": "Rolls back every applied migration newer than the given version. Version 0 rolls back everything.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "migrations"
+                ],
+                "summary": "Roll back migrations down to a version",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Migration token",
+                        "name": "X-Migration-Token",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Target version",
+                        "name": "version",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Envelope-array_github_com_umohsamuel_eba_services_auth_internal_adapters_db_migrations_Result"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Envelope-any"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/response.Envelope-any"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Envelope-any"
+                        }
+                    }
+                }
+            }
+        },
+        "/migrations/status": {
+            "get": {
+                "description": "Lists every migration and whether it is applied or pending.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "migrations"
+                ],
+                "summary": "Migration status",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Migration token",
+                        "name": "X-Migration-Token",
+                        "in": "header",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Envelope-array_github_com_umohsamuel_eba_services_auth_internal_adapters_db_migrations_Status"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/response.Envelope-any"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Envelope-any"
+                        }
+                    }
+                }
+            }
+        },
+        "/migrations/up": {
+            "post": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "migrations"
+                ],
+                "summary": "Apply all pending migrations",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Migration token",
+                        "name": "X-Migration-Token",
+                        "in": "header",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Envelope-array_github_com_umohsamuel_eba_services_auth_internal_adapters_db_migrations_Result"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/response.Envelope-any"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Envelope-any"
+                        }
+                    }
+                }
+            }
+        },
+        "/migrations/up-by-one": {
+            "post": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "migrations"
+                ],
+                "summary": "Apply the next pending migration",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Migration token",
+                        "name": "X-Migration-Token",
+                        "in": "header",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Envelope-array_github_com_umohsamuel_eba_services_auth_internal_adapters_db_migrations_Result"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/response.Envelope-any"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/response.Envelope-any"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Envelope-any"
+                        }
+                    }
+                }
+            }
+        },
+        "/migrations/up-to/{version}": {
+            "post": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "migrations"
+                ],
+                "summary": "Apply pending migrations up to a version",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Migration token",
+                        "name": "X-Migration-Token",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Target version",
+                        "name": "version",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Envelope-array_github_com_umohsamuel_eba_services_auth_internal_adapters_db_migrations_Result"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Envelope-any"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/response.Envelope-any"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/response.Envelope-any"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Envelope-any"
+                        }
+                    }
+                }
+            }
+        },
+        "/migrations/version": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "migrations"
+                ],
+                "summary": "Current schema version",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Migration token",
+                        "name": "X-Migration-Token",
+                        "in": "header",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Envelope-internal_adapters_transport_http_handlers_versionResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/response.Envelope-any"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Envelope-any"
+                        }
+                    }
+                }
+            }
         }
     },
     "definitions": {
+        "github_com_umohsamuel_eba_services_auth_internal_adapters_db_migrations.Result": {
+            "type": "object",
+            "properties": {
+                "direction": {
+                    "type": "string"
+                },
+                "duration_ms": {
+                    "type": "integer"
+                },
+                "empty": {
+                    "type": "boolean"
+                },
+                "path": {
+                    "type": "string"
+                },
+                "version": {
+                    "type": "integer"
+                }
+            }
+        },
+        "github_com_umohsamuel_eba_services_auth_internal_adapters_db_migrations.Status": {
+            "type": "object",
+            "properties": {
+                "applied_at": {
+                    "type": "string"
+                },
+                "path": {
+                    "type": "string"
+                },
+                "state": {
+                    "type": "string"
+                },
+                "version": {
+                    "type": "integer"
+                }
+            }
+        },
         "github_com_umohsamuel_eba_services_auth_internal_domain_user.User": {
             "type": "object",
             "properties": {
@@ -261,6 +624,14 @@ const docTemplate = `{
                 }
             }
         },
+        "internal_adapters_transport_http_handlers.versionResponse": {
+            "type": "object",
+            "properties": {
+                "version": {
+                    "type": "integer"
+                }
+            }
+        },
         "response.APIError": {
             "type": "object",
             "properties": {
@@ -276,6 +647,52 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "data": {},
+                "error": {
+                    "$ref": "#/definitions/response.APIError"
+                },
+                "message": {
+                    "type": "string"
+                },
+                "meta": {
+                    "$ref": "#/definitions/response.Meta"
+                },
+                "status": {
+                    "type": "string"
+                }
+            }
+        },
+        "response.Envelope-array_github_com_umohsamuel_eba_services_auth_internal_adapters_db_migrations_Result": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_umohsamuel_eba_services_auth_internal_adapters_db_migrations.Result"
+                    }
+                },
+                "error": {
+                    "$ref": "#/definitions/response.APIError"
+                },
+                "message": {
+                    "type": "string"
+                },
+                "meta": {
+                    "$ref": "#/definitions/response.Meta"
+                },
+                "status": {
+                    "type": "string"
+                }
+            }
+        },
+        "response.Envelope-array_github_com_umohsamuel_eba_services_auth_internal_adapters_db_migrations_Status": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_umohsamuel_eba_services_auth_internal_adapters_db_migrations.Status"
+                    }
+                },
                 "error": {
                     "$ref": "#/definitions/response.APIError"
                 },
@@ -335,6 +752,26 @@ const docTemplate = `{
             "properties": {
                 "data": {
                     "$ref": "#/definitions/github_com_umohsamuel_eba_services_auth_internal_services_auth.TokenConfig"
+                },
+                "error": {
+                    "$ref": "#/definitions/response.APIError"
+                },
+                "message": {
+                    "type": "string"
+                },
+                "meta": {
+                    "$ref": "#/definitions/response.Meta"
+                },
+                "status": {
+                    "type": "string"
+                }
+            }
+        },
+        "response.Envelope-internal_adapters_transport_http_handlers_versionResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/internal_adapters_transport_http_handlers.versionResponse"
                 },
                 "error": {
                     "$ref": "#/definitions/response.APIError"
