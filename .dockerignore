@@ -1,0 +1,9 @@
+# Docker builds run from the repo root so services can reach ../../pkg.
+# Keep secrets, VCS data and local build output out of the build context.
+.git
+**/.env
+**/.env.*
+**/*.exe
+**/tmp/
+go.work
+go.work.sum
