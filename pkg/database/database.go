@@ -5,6 +5,8 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"net"
+	"net/url"
 	"strconv"
 	"time"
 
@@ -18,6 +20,7 @@ type Config struct {
 	Password string
 	Database string
 	Schema   string
+	SSLMode  string
 }
 
 type Service interface {
@@ -36,14 +39,31 @@ func New(cfg Config) Service {
 		cfg.Schema = "public"
 	}
 
-	connStr := fmt.Sprintf("postgres://%s:%s@%s:%d/%s?sslmode=disable&search_path=%s", cfg.User, cfg.Password, cfg.Host, cfg.Port, cfg.Database, cfg.Schema)
+	if cfg.SSLMode == "" {
+		cfg.SSLMode = "verify-full"
+	}
 
-	db, err := sql.Open("pgx", connStr)
+	query := url.Values{}
+	query.Set("sslmode", cfg.SSLMode)
+	query.Set("search_path", cfg.Schema)
+
+	connURL := url.URL{
+		Scheme:   "postgres",
+		User:     url.UserPassword(cfg.User, cfg.Password),
+		Host:     net.JoinHostPort(cfg.Host, strconv.Itoa(cfg.Port)),
+		Path:     "/" + cfg.Database,
+		RawQuery: query.Encode(),
+	}
+
+	db, err := sql.Open("pgx", connURL.String())
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	if err := db.Ping(); err != nil {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	if err := db.PingContext(ctx); err != nil {
 		db.Close()
 		log.Fatal(err)
 	}
@@ -69,7 +89,7 @@ func (s *service) Health() map[string]string {
 	if err != nil {
 		stats["status"] = "down"
 		stats["error"] = fmt.Sprintf("db down: %v", err)
-		log.Fatalf("db down: %v", err)
+		log.Printf("db down: %v", err)
 		return stats
 	}
 

@@ -40,6 +40,7 @@ func main() {
 		Password: envCfg.DB.DB_PASSWORD,
 		Database: envCfg.DB.DB_DATABASE,
 		Schema:   envCfg.DB.DB_SCHEMA,
+		SSLMode:  envCfg.DB.DB_SSLMODE,
 	}
 
 	dbSrv := database.New(dbCfg)

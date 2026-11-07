@@ -3,6 +3,8 @@ package auth
 import (
 	"context"
 	stderrors "errors"
+	"fmt"
+	"sync"
 	"time"
 
 	"github.com/google/uuid"
@@ -30,6 +32,8 @@ type Config struct {
 }
 
 func NewAuthService(deps Config) *AuthService {
+	dummyHash()
+
 	return &AuthService{
 		users:        deps.Users,
 		refreshToken: deps.RefreshToken,
@@ -78,7 +82,13 @@ func (s *AuthService) Register(
 }
 
 // A dummy hash to run against if a user isn't found to mitigate timing attacks.
-const dummyHash = "$2a$10$xK9vG/5F7y8Kz7v9B6h2u.D8r1e2f3g4h5i6j7k8l9m0n1o2p3q4r"
+var dummyHash = sync.OnceValue(func() string {
+	h, err := hash.HashPassword(uuid.NewString())
+	if err != nil {
+		panic(fmt.Sprintf("generate dummy password hash: %v", err))
+	}
+	return h
+})
 
 type TokenConfig struct {
 	AccessToken           string    `json:"access_token,omitempty"`
@@ -112,7 +122,7 @@ func (s *AuthService) Login(
 
 	var targetHash string
 	if err != nil {
-		targetHash = dummyHash
+		targetHash = dummyHash()
 	} else {
 		targetHash = u.PasswordHash
 	}
