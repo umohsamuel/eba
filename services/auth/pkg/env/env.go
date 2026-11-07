@@ -16,6 +16,11 @@ type Env struct {
 	DB            PostgresEnv
 	JWT           JWTEnv
 	Cookie        CookieEnv
+	Migration     MigrationEnv
+}
+
+type MigrationEnv struct {
+	MIGRATION_TOKEN string `env:"MIGRATION_TOKEN"`
 }
 
 type JWTEnv struct {

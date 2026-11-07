@@ -19,22 +19,23 @@ import (
 
 type CookieConfig = handlers.CookieConfig
 
+type MigrationConfig = handlers.MigrationConfig
+
 type HttpServer struct {
-	router    *gin.Engine
-	services  *services.Services
-	cookieCfg CookieConfig
+	router       *gin.Engine
+	services     *services.Services
+	cookieCfg    CookieConfig
+	migrationCfg MigrationConfig
 }
 
-func NewHttpServer(svc *services.Services, cookieCfg CookieConfig) *HttpServer {
+func NewHttpServer(svc *services.Services, cookieCfg CookieConfig, migrationCfg MigrationConfig) *HttpServer {
 	r := gin.Default()
-	s := &HttpServer{router: r, services: svc, cookieCfg: cookieCfg}
+	s := &HttpServer{router: r, services: svc, cookieCfg: cookieCfg, migrationCfg: migrationCfg}
 
 	s.setupRoutes()
 	return s
 }
 
-// swaggerDarkCSS replaces gin-swagger's default index.css. The first three
-// rules are gin-swagger's defaults; the last two turn the page dark.
 const swaggerDarkCSS = `
 html { box-sizing: border-box; overflow-y: scroll; }
 *, *:before, *:after { box-sizing: inherit; }
@@ -58,6 +59,9 @@ func (s *HttpServer) setupRoutes() {
 
 	authHandler := handlers.NewAuthHandler(s.services, s.cookieCfg)
 	authHandler.RegisterRoutes(v1)
+
+	migrationHandler := handlers.NewMigrationHandler(s.migrationCfg)
+	migrationHandler.RegisterRoutes(v1)
 }
 
 func (s *HttpServer) Handler() http.Handler {

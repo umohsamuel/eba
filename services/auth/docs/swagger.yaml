@@ -1,5 +1,29 @@
 basePath: /api/v1
 definitions:
+  github_com_umohsamuel_eba_services_auth_internal_adapters_db_migrations.Result:
+    properties:
+      direction:
+        type: string
+      duration_ms:
+        type: integer
+      empty:
+        type: boolean
+      path:
+        type: string
+      version:
+        type: integer
+    type: object
+  github_com_umohsamuel_eba_services_auth_internal_adapters_db_migrations.Status:
+    properties:
+      applied_at:
+        type: string
+      path:
+        type: string
+      state:
+        type: string
+      version:
+        type: integer
+    type: object
   github_com_umohsamuel_eba_services_auth_internal_domain_user.User:
     properties:
       email:
@@ -44,6 +68,11 @@ definitions:
       password:
         type: string
     type: object
+  internal_adapters_transport_http_handlers.versionResponse:
+    properties:
+      version:
+        type: integer
+    type: object
   response.APIError:
     properties:
       code:
@@ -54,6 +83,36 @@ definitions:
   response.Envelope-any:
     properties:
       data: {}
+      error:
+        $ref: '#/definitions/response.APIError'
+      message:
+        type: string
+      meta:
+        $ref: '#/definitions/response.Meta'
+      status:
+        type: string
+    type: object
+  response.Envelope-array_github_com_umohsamuel_eba_services_auth_internal_adapters_db_migrations_Result:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/github_com_umohsamuel_eba_services_auth_internal_adapters_db_migrations.Result'
+        type: array
+      error:
+        $ref: '#/definitions/response.APIError'
+      message:
+        type: string
+      meta:
+        $ref: '#/definitions/response.Meta'
+      status:
+        type: string
+    type: object
+  response.Envelope-array_github_com_umohsamuel_eba_services_auth_internal_adapters_db_migrations_Status:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/github_com_umohsamuel_eba_services_auth_internal_adapters_db_migrations.Status'
+        type: array
       error:
         $ref: '#/definitions/response.APIError'
       message:
@@ -93,6 +152,19 @@ definitions:
     properties:
       data:
         $ref: '#/definitions/github_com_umohsamuel_eba_services_auth_internal_services_auth.TokenConfig'
+      error:
+        $ref: '#/definitions/response.APIError'
+      message:
+        type: string
+      meta:
+        $ref: '#/definitions/response.Meta'
+      status:
+        type: string
+    type: object
+  response.Envelope-internal_adapters_transport_http_handlers_versionResponse:
+    properties:
+      data:
+        $ref: '#/definitions/internal_adapters_transport_http_handlers.versionResponse'
       error:
         $ref: '#/definitions/response.APIError'
       message:
@@ -248,6 +320,221 @@ paths:
       summary: Register a new user
       tags:
       - auth
+  /migrations/down:
+    post:
+      parameters:
+      - description: Migration token
+        in: header
+        name: X-Migration-Token
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Envelope-array_github_com_umohsamuel_eba_services_auth_internal_adapters_db_migrations_Result'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.Envelope-any'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/response.Envelope-any'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/response.Envelope-any'
+      summary: Roll back the latest applied migration
+      tags:
+      - migrations
+  /migrations/down-to/{version}:
+    post:
+      description: Rolls back every applied migration newer than the given version.
+        Version 0 rolls back everything.
+      parameters:
+      - description: Migration token
+        in: header
+        name: X-Migration-Token
+        required: true
+        type: string
+      - description: Target version
+        in: path
+        name: version
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Envelope-array_github_com_umohsamuel_eba_services_auth_internal_adapters_db_migrations_Result'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.Envelope-any'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.Envelope-any'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/response.Envelope-any'
+      summary: Roll back migrations down to a version
+      tags:
+      - migrations
+  /migrations/status:
+    get:
+      description: Lists every migration and whether it is applied or pending.
+      parameters:
+      - description: Migration token
+        in: header
+        name: X-Migration-Token
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Envelope-array_github_com_umohsamuel_eba_services_auth_internal_adapters_db_migrations_Status'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.Envelope-any'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/response.Envelope-any'
+      summary: Migration status
+      tags:
+      - migrations
+  /migrations/up:
+    post:
+      parameters:
+      - description: Migration token
+        in: header
+        name: X-Migration-Token
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Envelope-array_github_com_umohsamuel_eba_services_auth_internal_adapters_db_migrations_Result'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.Envelope-any'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/response.Envelope-any'
+      summary: Apply all pending migrations
+      tags:
+      - migrations
+  /migrations/up-by-one:
+    post:
+      parameters:
+      - description: Migration token
+        in: header
+        name: X-Migration-Token
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Envelope-array_github_com_umohsamuel_eba_services_auth_internal_adapters_db_migrations_Result'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.Envelope-any'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/response.Envelope-any'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/response.Envelope-any'
+      summary: Apply the next pending migration
+      tags:
+      - migrations
+  /migrations/up-to/{version}:
+    post:
+      parameters:
+      - description: Migration token
+        in: header
+        name: X-Migration-Token
+        required: true
+        type: string
+      - description: Target version
+        in: path
+        name: version
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Envelope-array_github_com_umohsamuel_eba_services_auth_internal_adapters_db_migrations_Result'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.Envelope-any'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.Envelope-any'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/response.Envelope-any'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/response.Envelope-any'
+      summary: Apply pending migrations up to a version
+      tags:
+      - migrations
+  /migrations/version:
+    get:
+      parameters:
+      - description: Migration token
+        in: header
+        name: X-Migration-Token
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Envelope-internal_adapters_transport_http_handlers_versionResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.Envelope-any'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/response.Envelope-any'
+      summary: Current schema version
+      tags:
+      - migrations
 schemes:
 - http
 swagger: "2.0"
