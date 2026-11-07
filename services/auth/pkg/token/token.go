@@ -33,18 +33,16 @@ func NewTokenManager(issuer string, accessSecret []byte, accessAudience []string
 	}
 }
 
-func (m *TokenManager) GenerateAccessToken(user user.User, accessTTL time.Duration) (string, error) {
-	now := time.Now().UTC()
-
+func (m *TokenManager) GenerateAccessToken(user user.User, issuedAt, expiresAt time.Time) (string, error) {
 	claims := CustomClaims{
 		User: user,
 		RegisteredClaims: jwt.RegisteredClaims{
-			Subject:   user.ID.String(),                       // sub
-			ExpiresAt: jwt.NewNumericDate(now.Add(accessTTL)), // exp
-			IssuedAt:  jwt.NewNumericDate(now),                // iat
-			NotBefore: jwt.NewNumericDate(now),                // nbf
-			Issuer:    m.issuer,                               // iss
-			Audience:  m.accessAudience,                       // aud
+			Subject:   user.ID.String(),              // sub
+			ExpiresAt: jwt.NewNumericDate(expiresAt), // exp
+			IssuedAt:  jwt.NewNumericDate(issuedAt),  // iat
+			NotBefore: jwt.NewNumericDate(issuedAt),  // nbf
+			Issuer:    m.issuer,                      // iss
+			Audience:  m.accessAudience,              // aud
 		},
 	}
 
