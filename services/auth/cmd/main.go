@@ -55,7 +55,11 @@ func main() {
 		Env:        *envCfg,
 	})
 
-	httpSrv := httpAdapter.NewHttpServer(appServices)
+	httpSrv := httpAdapter.NewHttpServer(appServices, httpAdapter.CookieConfig{
+		Secure:      envCfg.Cookie.COOKIE_SECURE,
+		Domain:      envCfg.Cookie.COOKIE_DOMAIN,
+		RefreshPath: envCfg.Cookie.COOKIE_REFRESH_PATH,
+	})
 
 	srvCfg := server.Config{
 		Port:         8080,

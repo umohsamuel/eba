@@ -14,10 +14,11 @@ import (
 
 type AuthHandler struct {
 	services *services.Services
+	cookies  cookieWriter
 }
 
-func NewAuthHandler(svc *services.Services) *AuthHandler {
-	return &AuthHandler{services: svc}
+func NewAuthHandler(svc *services.Services, cookieCfg CookieConfig) *AuthHandler {
+	return &AuthHandler{services: svc, cookies: cookieWriter{cfg: cookieCfg}}
 }
 
 func (h *AuthHandler) RegisterRoutes(rg *gin.RouterGroup) {
@@ -96,6 +97,8 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		return
 	}
 
+	h.cookies.SetAuth(c, loginResponse.Token)
+
 	ginresponse.HandleSuccess(c, http.StatusOK, loginResponse, "success").Send()
 }
 
@@ -129,6 +132,8 @@ func (h *AuthHandler) Refresh(c *gin.Context) {
 		ginresponse.HandleError(c, err).Send()
 		return
 	}
+
+	h.cookies.SetAuth(c, refreshResponse)
 
 	ginresponse.HandleSuccess(c, http.StatusOK, refreshResponse, "success").Send()
 }

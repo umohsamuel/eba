@@ -81,8 +81,10 @@ func (s *AuthService) Register(
 const dummyHash = "$2a$10$xK9vG/5F7y8Kz7v9B6h2u.D8r1e2f3g4h5i6j7k8l9m0n1o2p3q4r"
 
 type TokenConfig struct {
-	AccessToken  string `json:"access_token"`
-	RefreshToken string `json:"refresh_token"`
+	AccessToken           string    `json:"access_token"`
+	AccessTokenExpiresAt  time.Time `json:"access_token_expires_at"`
+	RefreshToken          string    `json:"refresh_token"`
+	RefreshTokenExpiresAt time.Time `json:"refresh_token_expires_at"`
 }
 
 type LoginResponse struct {
@@ -121,14 +123,18 @@ func (s *AuthService) Login(
 		return nil, errors.ErrInvalidCredentials
 	}
 
-	accessToken, err := s.tokenManager.GenerateAccessToken(*u, 15*time.Minute)
+	// JWT timestamps have second precision; truncating keeps the returned
+	// expiry times identical to the exp claims.
+	issuedAt := time.Now().UTC().Truncate(time.Second)
+	accessExpiresAt := issuedAt.Add(s.env.JWT.JWT_ACCESS_TTL)
+	expiresAt := issuedAt.Add(s.env.JWT.JWT_REFRESH_TTL)
+
+	accessToken, err := s.tokenManager.GenerateAccessToken(*u, issuedAt, accessExpiresAt)
 	if err != nil {
 		return nil, errors.ErrInternal.Wrap(err)
 	}
 
 	id := uuid.New()
-	issuedAt := time.Now().UTC().Truncate(time.Second)
-	expiresAt := issuedAt.Add(7 * 24 * time.Hour)
 
 	rawRefreshToken, err := s.tokenManager.GenerateRefreshToken(*u, id.String(), issuedAt, expiresAt)
 	if err != nil {
@@ -149,8 +155,10 @@ func (s *AuthService) Login(
 	return &LoginResponse{
 		User: u,
 		Token: &TokenConfig{
-			AccessToken:  accessToken,
-			RefreshToken: rawRefreshToken,
+			AccessToken:           accessToken,
+			AccessTokenExpiresAt:  accessExpiresAt,
+			RefreshToken:          rawRefreshToken,
+			RefreshTokenExpiresAt: expiresAt,
 		},
 	}, nil
 }
@@ -193,13 +201,18 @@ func (s *AuthService) RefreshAccessToken(
 		return nil, err
 	}
 
-	accessToken, err := s.tokenManager.GenerateAccessToken(*u, 15*time.Minute)
+	issuedAt := time.Now().UTC().Truncate(time.Second)
+	accessExpiresAt := issuedAt.Add(s.env.JWT.JWT_ACCESS_TTL)
+
+	accessToken, err := s.tokenManager.GenerateAccessToken(*u, issuedAt, accessExpiresAt)
 	if err != nil {
 		return nil, errors.ErrInternal.Wrap(err)
 	}
 
 	return &TokenConfig{
-		AccessToken:  accessToken,
-		RefreshToken: refreshToken,
+		AccessToken:           accessToken,
+		AccessTokenExpiresAt:  accessExpiresAt,
+		RefreshToken:          refreshToken,
+		RefreshTokenExpiresAt: row.ExpiresAt,
 	}, nil
 }

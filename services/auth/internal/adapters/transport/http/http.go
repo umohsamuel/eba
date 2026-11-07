@@ -17,14 +17,17 @@ import (
 //	@BasePath		/api/v1
 //	@schemes		http
 
+type CookieConfig = handlers.CookieConfig
+
 type HttpServer struct {
-	router   *gin.Engine
-	services *services.Services
+	router    *gin.Engine
+	services  *services.Services
+	cookieCfg CookieConfig
 }
 
-func NewHttpServer(svc *services.Services) *HttpServer {
+func NewHttpServer(svc *services.Services, cookieCfg CookieConfig) *HttpServer {
 	r := gin.Default()
-	s := &HttpServer{router: r, services: svc}
+	s := &HttpServer{router: r, services: svc, cookieCfg: cookieCfg}
 
 	s.setupRoutes()
 	return s
@@ -53,7 +56,7 @@ func (s *HttpServer) setupRoutes() {
 
 	v1 := s.router.Group("/api/v1")
 
-	authHandler := handlers.NewAuthHandler(s.services)
+	authHandler := handlers.NewAuthHandler(s.services, s.cookieCfg)
 	authHandler.RegisterRoutes(v1)
 }
 
