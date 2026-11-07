@@ -1,8 +1,8 @@
 services:
   # app:
   #   build:
-  #     context: .
-  #     dockerfile: Dockerfile
+  #     context: ../..
+  #     dockerfile: services/auth/Dockerfile
   #     target: prod
   #   restart: unless-stopped
   #   ports:
