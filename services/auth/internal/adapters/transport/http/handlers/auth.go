@@ -29,6 +29,7 @@ func (h *AuthHandler) RegisterRoutes(rg *gin.RouterGroup) {
 		authGroup.POST("/login", h.Login)
 		authGroup.POST("/refresh", h.Refresh)
 		authGroup.POST("/forgot-password", h.ForgotPassword)
+		authGroup.POST("/reset-password", h.ResetPassword)
 	}
 }
 
@@ -177,6 +178,21 @@ type forgotPasswordRequest struct {
 	Email string `json:"email"`
 }
 
+const forgotPasswordMessage = "If an account exists for that email, we've sent a reset link."
+
+// ForgotPassword godoc
+//
+//	@Summary		Request a password reset
+//	@Description	Sends a password reset link if an account exists for the email. The response is the same
+//	@Description	whether or not the account exists.
+//	@Tags			auth
+//	@Accept			json
+//	@Produce		json
+//	@Param			request	body		forgotPasswordRequest	true	"Account email"
+//	@Success		200		{object}	response.Envelope[any]
+//	@Failure		400		{object}	response.Envelope[any]
+//	@Failure		500		{object}	response.Envelope[any]
+//	@Router			/auth/forgot-password [post]
 func (h *AuthHandler) ForgotPassword(c *gin.Context) {
 	var req forgotPasswordRequest
 
@@ -186,17 +202,32 @@ func (h *AuthHandler) ForgotPassword(c *gin.Context) {
 	}
 
 	if err := h.services.Auth.ForgotPassword(c, req.Email); err != nil {
-		ginresponse.HandleMessage(c, http.StatusOK, "If an account exists for that email, we've sent a reset link.").Send()
+		ginresponse.HandleError(c, err).Send()
 		return
 	}
 
-	ginresponse.HandleMessage(c, http.StatusOK, "If an account exists for that email, we've sent a reset link.").Send()
+	ginresponse.HandleMessage(c, http.StatusOK, forgotPasswordMessage).Send()
 }
 
 type resetPasswordRequest struct {
-	Token string `json:"token"`
+	Token       string `json:"token"`
+	NewPassword string `json:"new_password"`
 }
 
+// ResetPassword godoc
+//
+//	@Summary		Reset password
+//	@Description	Sets a new password using the token from the reset link. The token works once, and all
+//	@Description	existing sessions are signed out.
+//	@Tags			auth
+//	@Accept			json
+//	@Produce		json
+//	@Param			request	body		resetPasswordRequest	true	"Reset token and new password"
+//	@Success		200		{object}	response.Envelope[any]
+//	@Failure		400		{object}	response.Envelope[any]
+//	@Failure		401		{object}	response.Envelope[any]
+//	@Failure		500		{object}	response.Envelope[any]
+//	@Router			/auth/reset-password [post]
 func (h *AuthHandler) ResetPassword(c *gin.Context) {
 	var req resetPasswordRequest
 
@@ -205,9 +236,10 @@ func (h *AuthHandler) ResetPassword(c *gin.Context) {
 		return
 	}
 
-	if err := h.services.Auth.ResetPassword(c, req.Token); err != nil {
-
+	if err := h.services.Auth.ResetPassword(c, req.Token, req.NewPassword); err != nil {
+		ginresponse.HandleError(c, err).Send()
 		return
 	}
 
+	ginresponse.HandleMessage(c, http.StatusOK, "password has been reset").Send()
 }

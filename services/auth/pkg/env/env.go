@@ -14,10 +14,13 @@ type Env struct {
 	CLIENT_ORIGIN string `env:"CLIENT_ORIGIN"`
 	AppEnv        string `env:"APP_ENV" envDefault:"development"`
 	LogLevel      string `env:"LOG_LEVEL" envDefault:"info"`
-	DB            PostgresEnv
-	JWT           JWTEnv
-	Cookie        CookieEnv
-	Migration     MigrationEnv
+
+	PASSWORD_RESET_TTL time.Duration `env:"PASSWORD_RESET_TTL" envDefault:"30m"`
+
+	DB        PostgresEnv
+	JWT       JWTEnv
+	Cookie    CookieEnv
+	Migration MigrationEnv
 }
 
 type MigrationEnv struct {

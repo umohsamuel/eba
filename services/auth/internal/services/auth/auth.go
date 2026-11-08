@@ -2,8 +2,11 @@ package auth
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/base64"
 	stderrors "errors"
 	"fmt"
+	"log/slog"
 	"sync"
 	"time"
 
@@ -11,6 +14,7 @@ import (
 	"github.com/umohsamuel/eba/services/auth/internal/domain/errors"
 	"github.com/umohsamuel/eba/services/auth/internal/domain/refreshtoken"
 	"github.com/umohsamuel/eba/services/auth/internal/domain/user"
+	"github.com/umohsamuel/eba/services/auth/internal/domain/usertokens"
 	"github.com/umohsamuel/eba/services/auth/pkg/env"
 	"github.com/umohsamuel/eba/services/auth/pkg/hash"
 	"github.com/umohsamuel/eba/services/auth/pkg/regexx"
@@ -22,6 +26,12 @@ type AuthService struct {
 	refreshToken refreshtoken.RefreshTokenRepository
 	env          env.Env
 	tokenManager token.TokenManager
+	usertoken    usertokens.UserTokensRepository
+	notifier     PasswordResetNotifier
+}
+
+type PasswordResetNotifier interface {
+	SendPasswordReset(ctx context.Context, email, token string) error
 }
 
 type Config struct {
@@ -29,6 +39,8 @@ type Config struct {
 	RefreshToken refreshtoken.RefreshTokenRepository
 	Env          env.Env
 	TokenManager token.TokenManager
+	UserToken    usertokens.UserTokensRepository
+	Notifier     PasswordResetNotifier
 }
 
 func NewAuthService(deps Config) *AuthService {
@@ -39,6 +51,8 @@ func NewAuthService(deps Config) *AuthService {
 		refreshToken: deps.RefreshToken,
 		env:          deps.Env,
 		tokenManager: deps.TokenManager,
+		usertoken:    deps.UserToken,
+		notifier:     deps.Notifier,
 	}
 }
 
@@ -177,35 +191,91 @@ func (s *AuthService) ForgotPassword(
 	ctx context.Context,
 	email string,
 ) error {
-	_, err := s.users.GetByEmail(ctx, email)
-	if err != nil {
-		return errors.ErrUserNotFound.Wrap(err)
+	if !regexx.ValidateEmail(email) {
+		return errors.ErrInvalidEmail
 	}
 
-	// fahhh, i need a notification service here
-	// todo:
-	// send the user a token or some link with a token to go reset their password
+	u, err := s.users.GetByEmail(ctx, email)
+	if err != nil {
+		if stderrors.Is(err, errors.ErrUserNotFound) {
+			return nil
+		}
+		return err
+	}
+
+	rawToken, err := newOpaqueToken()
+	if err != nil {
+		return errors.ErrInternal.Wrap(err)
+	}
+
+	if err := s.usertoken.RevokeAllForUser(ctx, u.ID, usertokens.PurposePasswordReset); err != nil {
+		return err
+	}
+
+	_, err = s.usertoken.Create(ctx, &usertokens.UserToken{
+		ID:        uuid.New(),
+		UserID:    u.ID,
+		Purpose:   usertokens.PurposePasswordReset,
+		TokenHash: hash.HashToken(rawToken),
+		ExpiresAt: time.Now().Add(s.env.PASSWORD_RESET_TTL),
+	})
+	if err != nil {
+		return err
+	}
+
+	if s.notifier == nil {
+		slog.ErrorContext(ctx, "password reset notifier not configured", "user_id", u.ID)
+		return nil
+	}
+
+	if err := s.notifier.SendPasswordReset(ctx, u.Email, rawToken); err != nil {
+		slog.ErrorContext(ctx, "send password reset", "user_id", u.ID, "error", err)
+	}
 
 	return nil
-
 }
 
 func (s *AuthService) ResetPassword(
 	ctx context.Context,
-	token string,
+	rawToken string,
+	newPassword string,
 ) error {
-
-	_, err := s.users.GetByEmail(ctx, email)
-	if err != nil {
-		return errors.ErrUserNotFound.Wrap(err)
+	if rawToken == "" {
+		return errors.ErrTokenInvalid
 	}
 
-	// fahhh, i need a notification service here
-	// todo:
-	// send the user a token or some link with a token to go reset their password
+	if !regexx.ValidatePassword(newPassword) {
+		return errors.ErrInvalidPassword
+	}
 
-	return nil
+	tokenHash := hash.HashToken(rawToken)
 
+	ut, err := s.usertoken.GetByHash(ctx, tokenHash)
+	if err != nil {
+		if stderrors.Is(err, errors.ErrNotFound) {
+			return errors.ErrTokenInvalid.Wrap(err)
+		}
+		return err
+	}
+
+	if ut.Purpose != usertokens.PurposePasswordReset || ut.UsedAt != nil || time.Now().After(ut.ExpiresAt) {
+		return errors.ErrTokenInvalid
+	}
+
+	passwordHash, err := hash.HashPassword(newPassword)
+	if err != nil {
+		return errors.ErrInternal.Wrap(err)
+	}
+
+	return s.usertoken.ConsumePasswordReset(ctx, tokenHash, passwordHash)
+}
+
+func newOpaqueToken() (string, error) {
+	b := make([]byte, 32)
+	if _, err := rand.Read(b); err != nil {
+		return "", err
+	}
+	return base64.RawURLEncoding.EncodeToString(b), nil
 }
 
 func (s *AuthService) RefreshAccessToken(

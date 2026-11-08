@@ -26,3 +26,13 @@ type User struct {
 	PasswordHash string
 	CreatedAt    sql.NullTime
 }
+
+type UserToken struct {
+	ID        uuid.UUID
+	UserID    uuid.UUID
+	Purpose   string
+	TokenHash string
+	ExpiresAt time.Time
+	UsedAt    sql.NullTime
+	CreatedAt time.Time
+}

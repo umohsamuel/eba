@@ -17,6 +17,7 @@ type Config struct {
 	Repository *repository.AdaptersRepository
 	Env        env.Env
 	AccessKeys *token.AccessKeys
+	Notifier   authService.PasswordResetNotifier
 }
 
 func New(deps Config) *Services {
@@ -34,6 +35,8 @@ func New(deps Config) *Services {
 			RefreshToken: deps.Repository.Refresh,
 			Env:          deps.Env,
 			TokenManager: *tokenManager,
+			UserToken:    deps.Repository.UserToken,
+			Notifier:     deps.Notifier,
 		}),
 		Refresh: refresh.NewRefreshService(refresh.Config{
 			RefreshToken: deps.Repository.Refresh,
