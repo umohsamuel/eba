@@ -173,6 +173,41 @@ func (s *AuthService) Login(
 	}, nil
 }
 
+func (s *AuthService) ForgotPassword(
+	ctx context.Context,
+	email string,
+) error {
+	_, err := s.users.GetByEmail(ctx, email)
+	if err != nil {
+		return errors.ErrUserNotFound.Wrap(err)
+	}
+
+	// fahhh, i need a notification service here
+	// todo:
+	// send the user a token or some link with a token to go reset their password
+
+	return nil
+
+}
+
+func (s *AuthService) ResetPassword(
+	ctx context.Context,
+	token string,
+) error {
+
+	_, err := s.users.GetByEmail(ctx, email)
+	if err != nil {
+		return errors.ErrUserNotFound.Wrap(err)
+	}
+
+	// fahhh, i need a notification service here
+	// todo:
+	// send the user a token or some link with a token to go reset their password
+
+	return nil
+
+}
+
 func (s *AuthService) RefreshAccessToken(
 	ctx context.Context,
 	refreshToken string,

@@ -28,6 +28,7 @@ func (h *AuthHandler) RegisterRoutes(rg *gin.RouterGroup) {
 		authGroup.POST("/register", h.Register)
 		authGroup.POST("/login", h.Login)
 		authGroup.POST("/refresh", h.Refresh)
+		authGroup.POST("/forgot-password", h.ForgotPassword)
 	}
 }
 
@@ -170,4 +171,43 @@ func (h *AuthHandler) Refresh(c *gin.Context) {
 	}
 
 	ginresponse.HandleSuccess(c, http.StatusOK, refreshResponse, "success").Send()
+}
+
+type forgotPasswordRequest struct {
+	Email string `json:"email"`
+}
+
+func (h *AuthHandler) ForgotPassword(c *gin.Context) {
+	var req forgotPasswordRequest
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		ginresponse.HandleError(c, domainerrors.ErrBadRequest.Wrap(err)).Send()
+		return
+	}
+
+	if err := h.services.Auth.ForgotPassword(c, req.Email); err != nil {
+		ginresponse.HandleMessage(c, http.StatusOK, "If an account exists for that email, we've sent a reset link.").Send()
+		return
+	}
+
+	ginresponse.HandleMessage(c, http.StatusOK, "If an account exists for that email, we've sent a reset link.").Send()
+}
+
+type resetPasswordRequest struct {
+	Token string `json:"token"`
+}
+
+func (h *AuthHandler) ResetPassword(c *gin.Context) {
+	var req resetPasswordRequest
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		ginresponse.HandleError(c, domainerrors.ErrBadRequest.Wrap(err)).Send()
+		return
+	}
+
+	if err := h.services.Auth.ResetPassword(c, req.Token); err != nil {
+
+		return
+	}
+
 }
