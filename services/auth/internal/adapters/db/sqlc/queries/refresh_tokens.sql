@@ -23,3 +23,9 @@ RETURNING *;
 DELETE FROM refresh_tokens
 WHERE id = $1
 RETURNING id;
+
+-- name: RevokeRefreshTokensForUser :exec
+UPDATE refresh_tokens
+SET revoked = TRUE
+WHERE user_id = $1
+  AND revoked = FALSE;

@@ -13,6 +13,11 @@ var (
 		"internal server error",
 	)
 
+	ErrNotFound = apperror.New(
+		apperror.KindNotFound,
+		"not found",
+	)
+
 	ErrUserNotFound = apperror.New(
 		apperror.KindNotFound,
 		"user not found",

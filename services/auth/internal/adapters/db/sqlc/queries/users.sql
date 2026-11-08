@@ -29,3 +29,8 @@ RETURNING *;
 DELETE FROM users
 WHERE id = $1
 RETURNING id;
+
+-- name: UpdateUserPassword :execrows
+UPDATE users
+SET password_hash = $2
+WHERE id = $1;

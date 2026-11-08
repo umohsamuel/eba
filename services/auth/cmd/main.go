@@ -11,8 +11,10 @@ import (
 	"github.com/umohsamuel/eba/pkg/server"
 	"github.com/umohsamuel/eba/services/auth/internal/adapters/db/migrations"
 	"github.com/umohsamuel/eba/services/auth/internal/adapters/db/repository"
+	"github.com/umohsamuel/eba/services/auth/internal/adapters/notification"
 	httpAdapter "github.com/umohsamuel/eba/services/auth/internal/adapters/transport/http"
 	"github.com/umohsamuel/eba/services/auth/internal/services"
+	authService "github.com/umohsamuel/eba/services/auth/internal/services/auth"
 	"github.com/umohsamuel/eba/services/auth/pkg/env"
 	"github.com/umohsamuel/eba/services/auth/pkg/token"
 )
@@ -59,10 +61,16 @@ func main() {
 		os.Exit(1)
 	}
 
+	var notifier authService.PasswordResetNotifier
+	if envCfg.AppEnv == "development" {
+		notifier = notification.LogNotifier{}
+	}
+
 	appServices := services.New(services.Config{
 		Repository: repos,
 		Env:        *envCfg,
 		AccessKeys: accessKeys,
+		Notifier:   notifier,
 	})
 
 	migrator, err := migrations.New(db)
