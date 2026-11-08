@@ -8,8 +8,9 @@ import (
 )
 
 type Env struct {
-	Port          int    `env:"PORT" envDefault:"8080"`
-	CLIENT_ORIGIN string `env:"CLIENT_ORIGIN"`
+	Port          int               `env:"PORT" envDefault:"8080"`
+	CLIENT_ORIGIN string            `env:"CLIENT_ORIGIN"`
+	DOCS_SPECS    map[string]string `env:"DOCS_SPECS" envKeyValSeparator:"="`
 	DB            PostgresEnv
 }
 

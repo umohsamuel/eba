@@ -10,6 +10,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/umohsamuel/eba/pkg/server"
 	"github.com/umohsamuel/eba/pkg/shutdown"
+	"github.com/umohsamuel/eba/services/api/internal/docs"
 	env "github.com/umohsamuel/eba/services/api/pkg"
 )
 
@@ -56,6 +57,12 @@ func RegisterRoutes(r *gin.Engine) http.Handler {
 		AllowHeaders:     []string{"Accept", "Authorization", "Content-Type"},
 		AllowCredentials: true,
 	}))
+
+	docsHandler, err := docs.New(envCfg.DOCS_SPECS)
+	if err != nil {
+		log.Fatalf("failed to set up docs: %v", err)
+	}
+	docsHandler.RegisterRoutes(r)
 
 	return r
 }

@@ -40,6 +40,7 @@ require (
 	github.com/gin-contrib/cors v1.7.9
 	github.com/gin-gonic/gin v1.12.0
 	github.com/joho/godotenv v1.5.1
+	github.com/swaggo/files/v2 v2.0.2
 	github.com/umohsamuel/eba/pkg/server v0.0.0
 	github.com/umohsamuel/eba/pkg/shutdown v0.0.0
 )
