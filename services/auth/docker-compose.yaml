@@ -11,6 +11,9 @@ services:
     env_file: .env
     environment:
       DB_HOST: postgres
+      JWT_ACCESS_PRIVATE_KEY_FILE: /run/secrets/jwt_access_private_key
+    secrets:
+      - jwt_access_private_key
     depends_on:
       postgres:
         condition: service_healthy
@@ -37,6 +40,10 @@ services:
     networks:
       - api_network
     restart: unless-stopped
+
+secrets:
+  jwt_access_private_key:
+    file: ${JWT_ACCESS_PRIVATE_KEY_FILE:-keys/access_private.pem}
 
 volumes:
   postgresql_data:

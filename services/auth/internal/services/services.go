@@ -16,15 +16,16 @@ type Services struct {
 type Config struct {
 	Repository *repository.AdaptersRepository
 	Env        env.Env
+	AccessKeys *token.AccessKeys
 }
 
 func New(deps Config) *Services {
 	tokenManager := token.NewTokenManager(
 		deps.Env.JWT.JWT_ISSUER,
-		[]byte(deps.Env.JWT.JWT_SECRET),
+		deps.AccessKeys,
 		deps.Env.JWT.JWT_AUDIENCE,
 		[]byte(deps.Env.JWT.JWT_REFRESH_SECRET),
-		deps.Env.JWT.JWT_AUDIENCE,
+		[]string{deps.Env.JWT.JWT_REFRESH_AUDIENCE},
 	)
 
 	return &Services{

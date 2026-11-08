@@ -226,3 +226,19 @@ func (s *AuthService) RefreshAccessToken(
 		RefreshTokenExpiresAt: row.ExpiresAt,
 	}, nil
 }
+
+func (s *AuthService) JWKS() token.JWKS {
+	return s.tokenManager.AccessJWKS()
+}
+
+func (s *AuthService) VerifyAccessToken(ctx context.Context, accessToken string) (*token.CustomClaims, error) {
+	claims, err := s.tokenManager.ValidateAccessToken(accessToken)
+	if err != nil {
+		if stderrors.Is(err, token.ErrTokenExpired) {
+			return nil, errors.ErrTokenExpired.Wrap(err)
+		}
+		return nil, errors.ErrTokenInvalid.Wrap(err)
+	}
+
+	return claims, nil
+}

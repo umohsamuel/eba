@@ -25,10 +25,12 @@ type MigrationEnv struct {
 }
 
 type JWTEnv struct {
-	JWT_SECRET         string   `env:"JWT_SECRET,notEmpty"`
-	JWT_REFRESH_SECRET string   `env:"JWT_REFRESH_SECRET,notEmpty"`
-	JWT_ISSUER         string   `env:"JWT_ISSUER,notEmpty"`
-	JWT_AUDIENCE       []string `env:"JWT_AUDIENCE,notEmpty"`
+	JWT_ACCESS_PRIVATE_KEY_FILE          string   `env:"JWT_ACCESS_PRIVATE_KEY_FILE,notEmpty"`
+	JWT_ACCESS_PREVIOUS_PUBLIC_KEY_FILES []string `env:"JWT_ACCESS_PREVIOUS_PUBLIC_KEY_FILES"`
+	JWT_REFRESH_SECRET                   string   `env:"JWT_REFRESH_SECRET,notEmpty"`
+	JWT_ISSUER                           string   `env:"JWT_ISSUER,notEmpty"`
+	JWT_AUDIENCE                         []string `env:"JWT_AUDIENCE,notEmpty"`
+	JWT_REFRESH_AUDIENCE                 string   `env:"JWT_REFRESH_AUDIENCE,notEmpty"`
 
 	JWT_ACCESS_TTL  time.Duration `env:"JWT_ACCESS_TTL" envDefault:"15m"`
 	JWT_REFRESH_TTL time.Duration `env:"JWT_REFRESH_TTL" envDefault:"168h"`
@@ -67,12 +69,8 @@ func LoadEnv() (*Env, error) {
 const minJWTSecretLength = 32
 
 func (j JWTEnv) validate() error {
-	if len(j.JWT_SECRET) < minJWTSecretLength || len(j.JWT_REFRESH_SECRET) < minJWTSecretLength {
-		return fmt.Errorf("JWT_SECRET and JWT_REFRESH_SECRET must be at least %d bytes", minJWTSecretLength)
-	}
-
-	if j.JWT_SECRET == j.JWT_REFRESH_SECRET {
-		return errors.New("JWT_SECRET and JWT_REFRESH_SECRET must differ")
+	if len(j.JWT_REFRESH_SECRET) < minJWTSecretLength {
+		return fmt.Errorf("JWT_REFRESH_SECRET must be at least %d bytes", minJWTSecretLength)
 	}
 
 	for _, aud := range j.JWT_AUDIENCE {

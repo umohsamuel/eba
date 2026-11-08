@@ -3,5 +3,6 @@
 **/.env.*
 **/*.exe
 **/tmp/
+**/*.pem
 go.work
 go.work.sum

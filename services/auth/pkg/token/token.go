@@ -16,17 +16,17 @@ var (
 type TokenManager struct {
 	issuer string
 
-	accessSecret   []byte
+	accessKeys     *AccessKeys
 	accessAudience []string
 
 	refreshSecret   []byte
 	refreshAudience []string
 }
 
-func NewTokenManager(issuer string, accessSecret []byte, accessAudience []string, refreshSecret []byte, refreshAudience []string) *TokenManager {
+func NewTokenManager(issuer string, accessKeys *AccessKeys, accessAudience []string, refreshSecret []byte, refreshAudience []string) *TokenManager {
 	return &TokenManager{
 		issuer:          issuer,
-		accessSecret:    accessSecret,
+		accessKeys:      accessKeys,
 		accessAudience:  accessAudience,
 		refreshSecret:   refreshSecret,
 		refreshAudience: refreshAudience,
@@ -46,9 +46,10 @@ func (m *TokenManager) GenerateAccessToken(user user.User, issuedAt, expiresAt t
 		},
 	}
 
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	token := jwt.NewWithClaims(jwt.SigningMethodRS256, claims)
+	token.Header["kid"] = m.accessKeys.signingKID
 
-	tokenString, err := token.SignedString(m.accessSecret)
+	tokenString, err := token.SignedString(m.accessKeys.signingKey)
 	if err != nil {
 		return "", err
 	}
@@ -87,18 +88,23 @@ func (m *TokenManager) GenerateRefreshToken(user user.User, refreshTokenId strin
 }
 
 func (m *TokenManager) ValidateAccessToken(tokenString string) (*CustomClaims, error) {
-	return m.parse(tokenString, m.accessSecret, m.accessAudience)
+	return m.parse(tokenString, m.accessKeys.keyFunc, jwt.SigningMethodRS256, m.accessAudience)
 }
 
 func (m *TokenManager) ValidateRefreshToken(tokenString string) (*CustomClaims, error) {
-	return m.parse(tokenString, m.refreshSecret, m.refreshAudience)
+	refreshKey := func(*jwt.Token) (any, error) { return m.refreshSecret, nil }
+	return m.parse(tokenString, refreshKey, jwt.SigningMethodHS256, m.refreshAudience)
 }
 
-func (m *TokenManager) parse(tokenString string, secret []byte, audience []string) (*CustomClaims, error) {
+func (m *TokenManager) AccessJWKS() JWKS {
+	return m.accessKeys.JWKS()
+}
+
+func (m *TokenManager) parse(tokenString string, keyFunc jwt.Keyfunc, method jwt.SigningMethod, audience []string) (*CustomClaims, error) {
 	claims := &CustomClaims{}
 	_, err := jwt.ParseWithClaims(tokenString, claims,
-		func(*jwt.Token) (interface{}, error) { return secret, nil },
-		jwt.WithValidMethods([]string{jwt.SigningMethodHS256.Alg()}),
+		keyFunc,
+		jwt.WithValidMethods([]string{method.Alg()}),
 		jwt.WithIssuer(m.issuer),
 		jwt.WithAudience(audience[0]),
 		jwt.WithExpirationRequired(),

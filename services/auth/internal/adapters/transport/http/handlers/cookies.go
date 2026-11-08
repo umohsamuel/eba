@@ -5,11 +5,12 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/umohsamuel/eba/services/auth/internal/adapters/transport/http/middlewares"
 	"github.com/umohsamuel/eba/services/auth/internal/services/auth"
 )
 
 const (
-	accessTokenCookie  = "access_token"
+	accessTokenCookie  = middlewares.AccessTokenCookie
 	refreshTokenCookie = "refresh_token"
 )
 

@@ -537,4 +537,10 @@ paths:
       - migrations
 schemes:
 - http
+securityDefinitions:
+  BearerAuth:
+    description: Enter "Bearer" followed by a space and the access token.
+    in: header
+    name: Authorization
+    type: apiKey
 swagger: "2.0"

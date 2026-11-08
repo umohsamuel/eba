@@ -14,6 +14,7 @@ import (
 	httpAdapter "github.com/umohsamuel/eba/services/auth/internal/adapters/transport/http"
 	"github.com/umohsamuel/eba/services/auth/internal/services"
 	"github.com/umohsamuel/eba/services/auth/pkg/env"
+	"github.com/umohsamuel/eba/services/auth/pkg/token"
 )
 
 var envCfg *env.Env
@@ -52,9 +53,16 @@ func main() {
 		DB: db,
 	})
 
+	accessKeys, err := token.LoadAccessKeys(envCfg.JWT.JWT_ACCESS_PRIVATE_KEY_FILE, envCfg.JWT.JWT_ACCESS_PREVIOUS_PUBLIC_KEY_FILES)
+	if err != nil {
+		slog.Error("failed to load access token keys", "error", err)
+		os.Exit(1)
+	}
+
 	appServices := services.New(services.Config{
 		Repository: repos,
 		Env:        *envCfg,
+		AccessKeys: accessKeys,
 	})
 
 	migrator, err := migrations.New(db)
