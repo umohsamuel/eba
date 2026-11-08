@@ -1,0 +1,20 @@
+go 1.27.1
+
+use (
+	./pkg/authmw
+	./pkg/database
+	./pkg/errors
+	./pkg/logger
+	./pkg/response
+	./pkg/server
+	./pkg/shutdown
+	./services/api
+	./services/auth
+	./services/cart
+	./services/inventory
+	./services/notification
+	./services/order
+	./services/payment
+	./services/product
+	./services/user
+)
