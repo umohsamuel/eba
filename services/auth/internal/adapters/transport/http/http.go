@@ -8,6 +8,7 @@ import (
 	ginSwagger "github.com/swaggo/gin-swagger"
 	_ "github.com/umohsamuel/eba/services/auth/docs"
 	"github.com/umohsamuel/eba/services/auth/internal/adapters/transport/http/handlers"
+	"github.com/umohsamuel/eba/services/auth/internal/adapters/transport/http/middlewares"
 	"github.com/umohsamuel/eba/services/auth/internal/services"
 )
 
@@ -16,6 +17,11 @@ import (
 //	@description	This is the auth service for EBA.
 //	@BasePath		/api/v1
 //	@schemes		http
+
+//	@securityDefinitions.apikey	BearerAuth
+//	@in							header
+//	@name						Authorization
+//	@description				Enter "Bearer" followed by a space and the access token.
 
 type CookieConfig = handlers.CookieConfig
 
@@ -57,8 +63,13 @@ func (s *HttpServer) setupRoutes() {
 
 	v1 := s.router.Group("/api/v1")
 
+	authMW := middlewares.NewAuth(s.services.Auth)
+	protected := v1.Group("", authMW.Handle)
+	_ = protected
+
 	authHandler := handlers.NewAuthHandler(s.services, s.cookieCfg)
 	authHandler.RegisterRoutes(v1)
+	s.router.GET("/.well-known/jwks.json", authHandler.JWKS)
 
 	migrationHandler := handlers.NewMigrationHandler(s.migrationCfg)
 	migrationHandler.RegisterRoutes(v1)

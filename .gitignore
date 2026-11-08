@@ -6,3 +6,4 @@ go.work.sum
 **/services/*/.env
 *.exe
 services/*/tmp/
+*.pem
