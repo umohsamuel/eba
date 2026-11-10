@@ -1,0 +1,7 @@
+Confirm your email address to finish setting up your {{.app_name}} account.
+
+Verify your email: {{.verify_url}}
+
+This link expires in {{.expires_in}}.
+
+If you didn't create an account, you can ignore this email.
