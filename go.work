@@ -4,6 +4,7 @@ use (
 	./pkg/authmw
 	./pkg/database
 	./pkg/errors
+	./pkg/events
 	./pkg/logger
 	./pkg/response
 	./pkg/server
