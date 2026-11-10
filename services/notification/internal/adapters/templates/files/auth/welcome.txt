@@ -1,0 +1,3 @@
+Welcome to {{.app_name}}! Your account is ready.
+
+If you have any questions, just reply to this email.

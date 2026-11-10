@@ -1,0 +1,4 @@
+{{define "content"}}<p>Confirm your email address to finish setting up your account.</p>
+{{template "button" (dict "url" .verify_url "label" "Verify email")}}
+<p>This link expires in {{.expires_in}}.</p>
+<p>If you didn't create an account, you can ignore this email.</p>{{end}}
