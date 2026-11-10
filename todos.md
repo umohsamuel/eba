@@ -2,6 +2,8 @@ piority:
 
 - setup swagger docs
 
+look into outbox pattern
+
 1. in auth servce have a cron job that clears the expired/revoked refersh tokens at intervals
 
 ```sql
