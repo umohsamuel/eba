@@ -16,6 +16,8 @@ type Env struct {
 	LogLevel      string `env:"LOG_LEVEL" envDefault:"info"`
 
 	PASSWORD_RESET_TTL time.Duration `env:"PASSWORD_RESET_TTL" envDefault:"30m"`
+	PASSWORD_RESET_URL string        `env:"PASSWORD_RESET_URL"`
+	KAFKA_BROKERS      []string      `env:"KAFKA_BROKERS"`
 
 	DB        PostgresEnv
 	JWT       JWTEnv

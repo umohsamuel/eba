@@ -62,7 +62,22 @@ func main() {
 	}
 
 	var notifier authService.PasswordResetNotifier
-	if envCfg.AppEnv == "development" {
+	switch {
+	case len(envCfg.KAFKA_BROKERS) > 0:
+		if envCfg.PASSWORD_RESET_URL == "" {
+			slog.Error("PASSWORD_RESET_URL is required when KAFKA_BROKERS is set")
+			os.Exit(1)
+		}
+
+		kafkaNotifier, err := notification.NewKafkaNotifier(envCfg.KAFKA_BROKERS, envCfg.PASSWORD_RESET_URL, envCfg.PASSWORD_RESET_TTL)
+		if err != nil {
+			slog.Error("failed to create kafka notifier", "error", err)
+			os.Exit(1)
+		}
+		defer kafkaNotifier.Close()
+
+		notifier = kafkaNotifier
+	case envCfg.AppEnv == "development":
 		notifier = notification.LogNotifier{}
 	}
 
