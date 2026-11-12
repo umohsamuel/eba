@@ -18,6 +18,7 @@ docs:
 
 # Create DB container
 docker-run:
+	@$(MAKE) -C ../../infra docker-run
 	@docker compose up -d
 
 # Shutdown DB container
