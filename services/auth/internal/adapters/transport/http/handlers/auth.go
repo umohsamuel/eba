@@ -217,8 +217,9 @@ type resetPasswordRequest struct {
 // ResetPassword godoc
 //
 //	@Summary		Reset password
-//	@Description	Sets a new password using the token from the reset link. The token works once, and all
-//	@Description	existing sessions are signed out.
+//	@Description	Sets a new password using the token from the reset link. The token works once. All refresh
+//	@Description	tokens are revoked, so no session can be renewed; access tokens already issued stay valid
+//	@Description	until they expire.
 //	@Tags			auth
 //	@Accept			json
 //	@Produce		json
