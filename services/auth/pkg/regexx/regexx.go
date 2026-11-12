@@ -1,13 +1,29 @@
 package regexx
 
 import (
+	"net/mail"
 	"regexp"
+	"strings"
 )
 
-var emailRegex = regexp.MustCompile(`^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`)
+const maxEmailLength = 254
+
+func NormalizeEmail(email string) string {
+	return strings.ToLower(strings.TrimSpace(email))
+}
 
 func ValidateEmail(email string) bool {
-	return emailRegex.MatchString(email)
+	if len(email) > maxEmailLength {
+		return false
+	}
+
+	addr, err := mail.ParseAddress(email)
+	if err != nil || addr.Address != email {
+		return false
+	}
+
+	domain := email[strings.LastIndex(email, "@")+1:]
+	return strings.Contains(domain, ".") && !strings.HasSuffix(domain, ".")
 }
 
 var (
