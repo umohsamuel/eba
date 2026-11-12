@@ -57,6 +57,8 @@ func (s *AuthService) Register(
 	email string,
 	password string,
 ) (*user.User, error) {
+	email = regexx.NormalizeEmail(email)
+
 	if !regexx.ValidateEmail(email) {
 		return nil, errors.ErrInvalidEmail
 	}
@@ -117,6 +119,8 @@ func (s *AuthService) Login(
 	email string,
 	password string,
 ) (*LoginResponse, error) {
+	email = regexx.NormalizeEmail(email)
+
 	if !regexx.ValidateEmail(email) {
 		return nil, errors.ErrInvalidEmail
 	}
@@ -187,6 +191,8 @@ func (s *AuthService) ForgotPassword(
 	ctx context.Context,
 	email string,
 ) error {
+	email = regexx.NormalizeEmail(email)
+
 	if !regexx.ValidateEmail(email) {
 		return errors.ErrInvalidEmail
 	}
