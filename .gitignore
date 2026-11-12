@@ -5,3 +5,5 @@
 *.exe
 services/*/tmp/
 *.pem
+
+infra/connectors/auth-outbox.json
