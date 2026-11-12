@@ -36,6 +36,7 @@ type HttpServer struct {
 
 func NewHttpServer(svc *services.Services, cookieCfg CookieConfig, migrationCfg MigrationConfig) *HttpServer {
 	r := gin.Default()
+	r.ContextWithFallback = true
 	s := &HttpServer{router: r, services: svc, cookieCfg: cookieCfg, migrationCfg: migrationCfg}
 
 	s.setupRoutes()
