@@ -39,9 +39,7 @@ func (h *MigrationHandler) RegisterRoutes(rg *gin.RouterGroup) {
 		migrationGroup.GET("/status", h.Status)
 		migrationGroup.GET("/version", h.Version)
 		migrationGroup.POST("/up", h.Up)
-		migrationGroup.POST("/up-by-one", h.UpByOne)
 		migrationGroup.POST("/up-to/:version", h.UpTo)
-		migrationGroup.POST("/down", h.Down)
 		migrationGroup.POST("/down-to/:version", h.DownTo)
 	}
 }
@@ -130,22 +128,6 @@ func (h *MigrationHandler) Up(c *gin.Context) {
 	h.sendResults(c, results, err)
 }
 
-// UpByOne godoc
-//
-//	@Summary		Apply the next pending migration
-//	@Tags			migrations
-//	@Produce		json
-//	@Param			X-Migration-Token	header		string	true	"Migration token"
-//	@Success		200					{object}	response.Envelope[[]migrations.Result]
-//	@Failure		401					{object}	response.Envelope[any]
-//	@Failure		409					{object}	response.Envelope[any]
-//	@Failure		500					{object}	response.Envelope[any]
-//	@Router			/migrations/up-by-one [post]
-func (h *MigrationHandler) UpByOne(c *gin.Context) {
-	results, err := h.migrator.UpByOne(migrationContext(c))
-	h.sendResults(c, results, err)
-}
-
 // UpTo godoc
 //
 //	@Summary		Apply pending migrations up to a version
@@ -167,22 +149,6 @@ func (h *MigrationHandler) UpTo(c *gin.Context) {
 	}
 
 	results, err := h.migrator.UpTo(migrationContext(c), version)
-	h.sendResults(c, results, err)
-}
-
-// Down godoc
-//
-//	@Summary		Roll back the latest applied migration
-//	@Tags			migrations
-//	@Produce		json
-//	@Param			X-Migration-Token	header		string	true	"Migration token"
-//	@Success		200					{object}	response.Envelope[[]migrations.Result]
-//	@Failure		401					{object}	response.Envelope[any]
-//	@Failure		409					{object}	response.Envelope[any]
-//	@Failure		500					{object}	response.Envelope[any]
-//	@Router			/migrations/down [post]
-func (h *MigrationHandler) Down(c *gin.Context) {
-	results, err := h.migrator.Down(migrationContext(c))
 	h.sendResults(c, results, err)
 }
 
