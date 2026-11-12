@@ -86,15 +86,6 @@ func (m *Migrator) Up(ctx context.Context) ([]Result, error) {
 	return toResults(results...), nil
 }
 
-func (m *Migrator) UpByOne(ctx context.Context) ([]Result, error) {
-	result, err := m.provider.UpByOne(ctx)
-	if err != nil {
-		return nil, mapError(err)
-	}
-
-	return toResults(result), nil
-}
-
 func (m *Migrator) UpTo(ctx context.Context, version int64) ([]Result, error) {
 	results, err := m.provider.UpTo(ctx, version)
 	if err != nil {
@@ -102,15 +93,6 @@ func (m *Migrator) UpTo(ctx context.Context, version int64) ([]Result, error) {
 	}
 
 	return toResults(results...), nil
-}
-
-func (m *Migrator) Down(ctx context.Context) ([]Result, error) {
-	result, err := m.provider.Down(ctx)
-	if err != nil {
-		return nil, mapError(err)
-	}
-
-	return toResults(result), nil
 }
 
 func (m *Migrator) DownTo(ctx context.Context, version int64) ([]Result, error) {

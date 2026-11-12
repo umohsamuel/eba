@@ -288,52 +288,6 @@ const docTemplate = `{
                 }
             }
         },
-        "/migrations/down": {
-            "post": {
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "migrations"
-                ],
-                "summary": "Roll back the latest applied migration",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Migration token",
-                        "name": "X-Migration-Token",
-                        "in": "header",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/response.Envelope-array_github_com_umohsamuel_eba_services_auth_internal_adapters_db_migrations_Result"
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "$ref": "#/definitions/response.Envelope-any"
-                        }
-                    },
-                    "409": {
-                        "description": "Conflict",
-                        "schema": {
-                            "$ref": "#/definitions/response.Envelope-any"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/response.Envelope-any"
-                        }
-                    }
-                }
-            }
-        },
         "/migrations/down-to/{version}": {
             "post": {
                 "description": "Rolls back every applied migration newer than the given version. Version 0 rolls back everything.",
@@ -456,52 +410,6 @@ const docTemplate = `{
                     },
                     "401": {
                         "description": "Unauthorized",
-                        "schema": {
-                            "$ref": "#/definitions/response.Envelope-any"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/response.Envelope-any"
-                        }
-                    }
-                }
-            }
-        },
-        "/migrations/up-by-one": {
-            "post": {
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "migrations"
-                ],
-                "summary": "Apply the next pending migration",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Migration token",
-                        "name": "X-Migration-Token",
-                        "in": "header",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/response.Envelope-array_github_com_umohsamuel_eba_services_auth_internal_adapters_db_migrations_Result"
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "$ref": "#/definitions/response.Envelope-any"
-                        }
-                    },
-                    "409": {
-                        "description": "Conflict",
                         "schema": {
                             "$ref": "#/definitions/response.Envelope-any"
                         }

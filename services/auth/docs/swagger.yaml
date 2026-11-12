@@ -400,36 +400,6 @@ paths:
       summary: Reset password
       tags:
       - auth
-  /migrations/down:
-    post:
-      parameters:
-      - description: Migration token
-        in: header
-        name: X-Migration-Token
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/response.Envelope-array_github_com_umohsamuel_eba_services_auth_internal_adapters_db_migrations_Result'
-        "401":
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/response.Envelope-any'
-        "409":
-          description: Conflict
-          schema:
-            $ref: '#/definitions/response.Envelope-any'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/response.Envelope-any'
-      summary: Roll back the latest applied migration
-      tags:
-      - migrations
   /migrations/down-to/{version}:
     post:
       description: Rolls back every applied migration newer than the given version.
@@ -518,36 +488,6 @@ paths:
           schema:
             $ref: '#/definitions/response.Envelope-any'
       summary: Apply all pending migrations
-      tags:
-      - migrations
-  /migrations/up-by-one:
-    post:
-      parameters:
-      - description: Migration token
-        in: header
-        name: X-Migration-Token
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/response.Envelope-array_github_com_umohsamuel_eba_services_auth_internal_adapters_db_migrations_Result'
-        "401":
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/response.Envelope-any'
-        "409":
-          description: Conflict
-          schema:
-            $ref: '#/definitions/response.Envelope-any'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/response.Envelope-any'
-      summary: Apply the next pending migration
       tags:
       - migrations
   /migrations/up-to/{version}:
