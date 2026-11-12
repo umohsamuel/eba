@@ -3,6 +3,7 @@ package env
 import (
 	"errors"
 	"fmt"
+	"net/url"
 	"time"
 
 	"github.com/caarlos0/env/v11"
@@ -16,8 +17,7 @@ type Env struct {
 	LogLevel      string `env:"LOG_LEVEL" envDefault:"info"`
 
 	PASSWORD_RESET_TTL time.Duration `env:"PASSWORD_RESET_TTL" envDefault:"30m"`
-	PASSWORD_RESET_URL string        `env:"PASSWORD_RESET_URL"`
-	KAFKA_BROKERS      []string      `env:"KAFKA_BROKERS"`
+	PASSWORD_RESET_URL url.URL       `env:"PASSWORD_RESET_URL,notEmpty"`
 
 	DB        PostgresEnv
 	JWT       JWTEnv
@@ -62,6 +62,10 @@ func LoadEnv() (*Env, error) {
 
 	if err := env.Parse(&cfg); err != nil {
 		return nil, fmt.Errorf("failed to parse env config: %w", err)
+	}
+
+	if !cfg.PASSWORD_RESET_URL.IsAbs() || cfg.PASSWORD_RESET_URL.Host == "" {
+		return nil, fmt.Errorf("PASSWORD_RESET_URL must be an absolute URL, got %q", cfg.PASSWORD_RESET_URL.String())
 	}
 
 	if err := cfg.JWT.validate(); err != nil {

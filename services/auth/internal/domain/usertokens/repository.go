@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/google/uuid"
+	"github.com/umohsamuel/eba/services/auth/internal/domain/outbox"
 )
 
 type UserTokensFilter struct {
@@ -18,6 +19,7 @@ type UserTokensRepository interface {
 	List(ctx context.Context, filter UserTokensFilter) ([]*UserToken, error)
 	Revoke(ctx context.Context, id uuid.UUID) (*UserToken, error)
 	RevokeAllForUser(ctx context.Context, userID uuid.UUID, purpose string) error
+	CreatePasswordReset(ctx context.Context, token *UserToken, event outbox.OutboxEvent) error
 	ConsumePasswordReset(ctx context.Context, tokenHash, passwordHash string) error
 	Delete(ctx context.Context, id uuid.UUID) (*uuid.UUID, error)
 	DeleteAllStale(ctx context.Context) (int64, error)
