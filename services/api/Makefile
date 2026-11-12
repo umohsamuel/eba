@@ -23,7 +23,7 @@ docker-down:
 # Clean the binary
 clean:
 	@echo "Cleaning..."
-	@rm -f main
+	@rm -f main.exe
 
 # Live Reload
 watch:
