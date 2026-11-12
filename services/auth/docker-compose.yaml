@@ -22,6 +22,7 @@ services:
   postgres:
     image: postgres:17.4
     container_name: auth_pg
+    command: ["postgres", "-c", "wal_level=logical"]
     volumes:
       - postgresql_data:/var/lib/postgresql/data
     environment:
@@ -39,6 +40,7 @@ services:
       start_period: 15s
     networks:
       - api_network
+      - eba_infra
     restart: unless-stopped
 
 secrets:
@@ -51,3 +53,6 @@ volumes:
 networks:
   api_network:
     driver: bridge
+  eba_infra:
+    name: eba_infra
+    external: true
