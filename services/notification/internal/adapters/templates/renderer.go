@@ -36,13 +36,13 @@ var definitions = map[string]definition{
 		subject:  "Verify your email",
 		html:     "auth/verify_email.html",
 		text:     "auth/verify_email.txt",
-		required: []string{"verify_url", "expires_in"},
+		required: []string{events.DataVerifyURL, events.DataExpiresIn},
 	},
 	events.TemplateAuthPasswordReset: {
 		subject:  "Reset your password",
 		html:     "auth/password_reset.html",
 		text:     "auth/password_reset.txt",
-		required: []string{"reset_url", "expires_in"},
+		required: []string{events.DataResetURL, events.DataExpiresIn},
 	},
 	events.TemplateAuthPasswordChanged: {
 		subject: "Your password was changed",
