@@ -369,8 +369,9 @@ paths:
       consumes:
       - application/json
       description: |-
-        Sets a new password using the token from the reset link. The token works once, and all
-        existing sessions are signed out.
+        Sets a new password using the token from the reset link. The token works once. All refresh
+        tokens are revoked, so no session can be renewed; access tokens already issued stay valid
+        until they expire.
       parameters:
       - description: Reset token and new password
         in: body

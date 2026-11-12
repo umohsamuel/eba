@@ -234,7 +234,7 @@
         },
         "/auth/reset-password": {
             "post": {
-                "description": "Sets a new password using the token from the reset link. The token works once, and all\nexisting sessions are signed out.",
+                "description": "Sets a new password using the token from the reset link. The token works once. All refresh\ntokens are revoked, so no session can be renewed; access tokens already issued stay valid\nuntil they expire.",
                 "consumes": [
                     "application/json"
                 ],
