@@ -1,0 +1,28 @@
+{
+  "name": "auth-outbox",
+  "config": {
+    "connector.class": "io.debezium.connector.postgresql.PostgresConnector",
+    "plugin.name": "pgoutput",
+    "database.hostname": "auth_pg",
+    "database.port": "5432",
+    "database.user": "debezium",
+    "database.password": "<debezium-password>",
+    "database.dbname": "eba_api",
+    "topic.prefix": "auth",
+    "topic.creation.default.replication.factor": "1",
+    "topic.creation.default.partitions": "3",
+    "slot.name": "auth_outbox",
+    "publication.name": "auth_outbox",
+    "publication.autocreate.mode": "disabled",
+    "table.include.list": "public.outbox",
+    "snapshot.mode": "no_data",
+    "tombstones.on.delete": "false",
+    "transforms": "outbox",
+    "transforms.outbox.type": "io.debezium.transforms.outbox.EventRouter",
+    "transforms.outbox.route.by.field": "aggregatetype",
+    "transforms.outbox.route.topic.replacement": "${routedByValue}",
+    "transforms.outbox.table.field.event.key": "aggregateid",
+    "key.converter": "org.apache.kafka.connect.storage.StringConverter",
+    "value.converter": "org.apache.kafka.connect.storage.StringConverter"
+  }
+}
