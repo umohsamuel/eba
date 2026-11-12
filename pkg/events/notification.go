@@ -13,6 +13,12 @@ const (
 	TemplateAuthPasswordChanged = "auth.password_changed"
 )
 
+const (
+	DataResetURL  = "reset_url"
+	DataVerifyURL = "verify_url"
+	DataExpiresIn = "expires_in"
+)
+
 type NotificationRequested struct {
 	EventID    string            `json:"event_id"`
 	Channel    string            `json:"channel"`
