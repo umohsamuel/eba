@@ -11,10 +11,8 @@ import (
 	"github.com/umohsamuel/eba/pkg/server"
 	"github.com/umohsamuel/eba/services/auth/internal/adapters/db/migrations"
 	"github.com/umohsamuel/eba/services/auth/internal/adapters/db/repository"
-	"github.com/umohsamuel/eba/services/auth/internal/adapters/notification"
 	httpAdapter "github.com/umohsamuel/eba/services/auth/internal/adapters/transport/http"
 	"github.com/umohsamuel/eba/services/auth/internal/services"
-	authService "github.com/umohsamuel/eba/services/auth/internal/services/auth"
 	"github.com/umohsamuel/eba/services/auth/pkg/env"
 	"github.com/umohsamuel/eba/services/auth/pkg/token"
 )
@@ -61,31 +59,10 @@ func main() {
 		os.Exit(1)
 	}
 
-	var notifier authService.PasswordResetNotifier
-	switch {
-	case len(envCfg.KAFKA_BROKERS) > 0:
-		if envCfg.PASSWORD_RESET_URL == "" {
-			slog.Error("PASSWORD_RESET_URL is required when KAFKA_BROKERS is set")
-			os.Exit(1)
-		}
-
-		kafkaNotifier, err := notification.NewKafkaNotifier(envCfg.KAFKA_BROKERS, envCfg.PASSWORD_RESET_URL, envCfg.PASSWORD_RESET_TTL)
-		if err != nil {
-			slog.Error("failed to create kafka notifier", "error", err)
-			os.Exit(1)
-		}
-		defer kafkaNotifier.Close()
-
-		notifier = kafkaNotifier
-	case envCfg.AppEnv == "development":
-		notifier = notification.LogNotifier{}
-	}
-
 	appServices := services.New(services.Config{
 		Repository: repos,
 		Env:        *envCfg,
 		AccessKeys: accessKeys,
-		Notifier:   notifier,
 	})
 
 	migrator, err := migrations.New(db)

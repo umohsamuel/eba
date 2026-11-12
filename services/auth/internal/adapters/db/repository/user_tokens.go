@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/umohsamuel/eba/services/auth/internal/adapters/db/sqlc"
 	domainerrors "github.com/umohsamuel/eba/services/auth/internal/domain/errors"
+	"github.com/umohsamuel/eba/services/auth/internal/domain/outbox"
 	"github.com/umohsamuel/eba/services/auth/internal/domain/usertokens"
 )
 
@@ -49,6 +50,59 @@ func (u *UserTokensRepositoryAdapter) Create(ctx context.Context, token *usertok
 		ExpiresAt: ut.ExpiresAt,
 		UsedAt:    usedAtPtr(ut.UsedAt),
 	}, nil
+}
+
+func (u *UserTokensRepositoryAdapter) CreatePasswordReset(ctx context.Context, token *usertokens.UserToken, event outbox.OutboxEvent) error {
+	tx, err := u.db.BeginTx(ctx, nil)
+	if err != nil {
+		return domainerrors.ErrInternal.Wrap(err)
+	}
+	defer tx.Rollback()
+
+	q := u.queries.WithTx(tx)
+
+	err = q.RevokeUserTokensForUser(ctx, sqlc.RevokeUserTokensForUserParams{
+		UserID:  token.UserID,
+		Purpose: token.Purpose,
+	})
+	if err != nil {
+		return domainerrors.ErrInternal.Wrap(err)
+	}
+
+	_, err = q.CreateUserToken(ctx, sqlc.CreateUserTokenParams{
+		ID:        token.ID,
+		UserID:    token.UserID,
+		Purpose:   token.Purpose,
+		TokenHash: token.TokenHash,
+		ExpiresAt: token.ExpiresAt,
+	})
+	if err != nil {
+		if isForeignKeyViolation(err) {
+			return domainerrors.ErrUserNotFound.Wrap(err)
+		}
+		return domainerrors.ErrInternal.Wrap(err)
+	}
+
+	err = q.InsertOutboxEvent(ctx, sqlc.InsertOutboxEventParams{
+		ID:            event.ID,
+		Aggregatetype: event.AggregateType,
+		Aggregateid:   event.AggregateID,
+		Type:          event.Type,
+		Payload:       event.Payload,
+	})
+	if err != nil {
+		return domainerrors.ErrInternal.Wrap(err)
+	}
+
+	if err := q.DeleteOutboxEvent(ctx, event.ID); err != nil {
+		return domainerrors.ErrInternal.Wrap(err)
+	}
+
+	if err := tx.Commit(); err != nil {
+		return domainerrors.ErrInternal.Wrap(err)
+	}
+
+	return nil
 }
 
 func (u *UserTokensRepositoryAdapter) GetByID(ctx context.Context, id uuid.UUID) (*usertokens.UserToken, error) {

@@ -4,19 +4,22 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/base64"
+	"encoding/json"
 	stderrors "errors"
 	"fmt"
-	"log/slog"
 	"sync"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/umohsamuel/eba/pkg/events"
 	"github.com/umohsamuel/eba/services/auth/internal/domain/errors"
+	"github.com/umohsamuel/eba/services/auth/internal/domain/outbox"
 	"github.com/umohsamuel/eba/services/auth/internal/domain/refreshtoken"
 	"github.com/umohsamuel/eba/services/auth/internal/domain/user"
 	"github.com/umohsamuel/eba/services/auth/internal/domain/usertokens"
 	"github.com/umohsamuel/eba/services/auth/pkg/env"
 	"github.com/umohsamuel/eba/services/auth/pkg/hash"
+	"github.com/umohsamuel/eba/services/auth/pkg/humanize"
 	"github.com/umohsamuel/eba/services/auth/pkg/regexx"
 	"github.com/umohsamuel/eba/services/auth/pkg/token"
 )
@@ -27,11 +30,6 @@ type AuthService struct {
 	env          env.Env
 	tokenManager token.TokenManager
 	usertoken    usertokens.UserTokensRepository
-	notifier     PasswordResetNotifier
-}
-
-type PasswordResetNotifier interface {
-	SendPasswordReset(ctx context.Context, email, token string) error
 }
 
 type Config struct {
@@ -40,7 +38,6 @@ type Config struct {
 	Env          env.Env
 	TokenManager token.TokenManager
 	UserToken    usertokens.UserTokensRepository
-	Notifier     PasswordResetNotifier
 }
 
 func NewAuthService(deps Config) *AuthService {
@@ -52,7 +49,6 @@ func NewAuthService(deps Config) *AuthService {
 		env:          deps.Env,
 		tokenManager: deps.TokenManager,
 		usertoken:    deps.UserToken,
-		notifier:     deps.Notifier,
 	}
 }
 
@@ -208,28 +204,42 @@ func (s *AuthService) ForgotPassword(
 		return errors.ErrInternal.Wrap(err)
 	}
 
-	if err := s.usertoken.RevokeAllForUser(ctx, u.ID, usertokens.PurposePasswordReset); err != nil {
-		return err
+	eventID := uuid.New()
+
+	resetURL := s.env.PASSWORD_RESET_URL
+	resetURL.Fragment = "token=" + rawToken
+
+	notifReq := events.NotificationRequested{
+		EventID:   eventID.String(),
+		Channel:   events.ChannelEmail,
+		Template:  events.TemplateAuthPasswordReset,
+		Recipient: u.Email,
+		Data: map[string]string{
+			events.DataResetURL:  resetURL.String(),
+			events.DataExpiresIn: humanize.Duration(s.env.PASSWORD_RESET_TTL),
+		},
+		OccurredAt: time.Now().UTC(),
 	}
 
-	_, err = s.usertoken.Create(ctx, &usertokens.UserToken{
+	outboxPayload, err := json.Marshal(notifReq)
+	if err != nil {
+		return errors.ErrInternal.Wrap(err)
+	}
+
+	if err := s.usertoken.CreatePasswordReset(ctx, &usertokens.UserToken{
 		ID:        uuid.New(),
 		UserID:    u.ID,
 		Purpose:   usertokens.PurposePasswordReset,
 		TokenHash: hash.HashToken(rawToken),
 		ExpiresAt: time.Now().Add(s.env.PASSWORD_RESET_TTL),
-	})
-	if err != nil {
+	}, outbox.OutboxEvent{
+		ID:            eventID,
+		AggregateType: events.TopicNotificationRequested,
+		AggregateID:   notifReq.Recipient,
+		Type:          notifReq.Template,
+		Payload:       outboxPayload,
+	}); err != nil {
 		return err
-	}
-
-	if s.notifier == nil {
-		slog.ErrorContext(ctx, "password reset notifier not configured", "user_id", u.ID)
-		return nil
-	}
-
-	if err := s.notifier.SendPasswordReset(ctx, u.Email, rawToken); err != nil {
-		slog.ErrorContext(ctx, "send password reset", "user_id", u.ID, "error", err)
 	}
 
 	return nil
