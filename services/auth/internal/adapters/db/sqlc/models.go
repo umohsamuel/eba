@@ -6,10 +6,20 @@ package sqlc
 
 import (
 	"database/sql"
+	"encoding/json"
 	"time"
 
 	"github.com/google/uuid"
 )
+
+type Outbox struct {
+	ID            uuid.UUID
+	Aggregatetype string
+	Aggregateid   string
+	Type          string
+	Payload       json.RawMessage
+	CreatedAt     time.Time
+}
 
 type RefreshToken struct {
 	ID        uuid.UUID
