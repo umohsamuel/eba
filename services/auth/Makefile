@@ -18,7 +18,7 @@ docs:
 
 # Create DB container
 docker-run:
-	@docker compose up --build
+	@docker compose up -d
 
 # Shutdown DB container
 docker-down:
