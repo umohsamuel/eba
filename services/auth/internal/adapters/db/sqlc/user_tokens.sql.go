@@ -40,7 +40,7 @@ INSERT INTO user_tokens (
 ) VALUES (
   $1, $2, $3, $4, $5
 )
-RETURNING id, user_id, purpose, token_hash, expires_at, used_at, created_at
+RETURNING id, user_id, purpose, token_hash, expires_at, used_at, created_at, attempts
 `
 
 type CreateUserTokenParams struct {
@@ -68,6 +68,7 @@ func (q *Queries) CreateUserToken(ctx context.Context, arg CreateUserTokenParams
 		&i.ExpiresAt,
 		&i.UsedAt,
 		&i.CreatedAt,
+		&i.Attempts,
 	)
 	return i, err
 }
@@ -100,7 +101,7 @@ func (q *Queries) DeleteUserToken(ctx context.Context, id uuid.UUID) (uuid.UUID,
 }
 
 const getUserTokenByHash = `-- name: GetUserTokenByHash :one
-SELECT id, user_id, purpose, token_hash, expires_at, used_at, created_at FROM user_tokens
+SELECT id, user_id, purpose, token_hash, expires_at, used_at, created_at, attempts FROM user_tokens
 WHERE token_hash = $1 LIMIT 1
 `
 
@@ -115,12 +116,13 @@ func (q *Queries) GetUserTokenByHash(ctx context.Context, tokenHash string) (Use
 		&i.ExpiresAt,
 		&i.UsedAt,
 		&i.CreatedAt,
+		&i.Attempts,
 	)
 	return i, err
 }
 
 const getUserTokenByID = `-- name: GetUserTokenByID :one
-SELECT id, user_id, purpose, token_hash, expires_at, used_at, created_at FROM user_tokens
+SELECT id, user_id, purpose, token_hash, expires_at, used_at, created_at, attempts FROM user_tokens
 WHERE id = $1 LIMIT 1
 `
 
@@ -135,12 +137,37 @@ func (q *Queries) GetUserTokenByID(ctx context.Context, id uuid.UUID) (UserToken
 		&i.ExpiresAt,
 		&i.UsedAt,
 		&i.CreatedAt,
+		&i.Attempts,
 	)
 	return i, err
 }
 
+const incrementUserTokenAttempts = `-- name: IncrementUserTokenAttempts :one
+UPDATE user_tokens
+SET attempts = attempts + 1,
+    used_at  = CASE WHEN attempts + 1 >= $3::int THEN now() ELSE used_at END
+WHERE token_hash = $1
+  AND purpose = $2
+  AND used_at IS NULL
+  AND expires_at > now()
+RETURNING attempts
+`
+
+type IncrementUserTokenAttemptsParams struct {
+	TokenHash   string
+	Purpose     string
+	MaxAttempts int32
+}
+
+func (q *Queries) IncrementUserTokenAttempts(ctx context.Context, arg IncrementUserTokenAttemptsParams) (int32, error) {
+	row := q.db.QueryRowContext(ctx, incrementUserTokenAttempts, arg.TokenHash, arg.Purpose, arg.MaxAttempts)
+	var attempts int32
+	err := row.Scan(&attempts)
+	return attempts, err
+}
+
 const listUserTokens = `-- name: ListUserTokens :many
-SELECT id, user_id, purpose, token_hash, expires_at, used_at, created_at FROM user_tokens
+SELECT id, user_id, purpose, token_hash, expires_at, used_at, created_at, attempts FROM user_tokens
 `
 
 func (q *Queries) ListUserTokens(ctx context.Context) ([]UserToken, error) {
@@ -160,6 +187,7 @@ func (q *Queries) ListUserTokens(ctx context.Context) ([]UserToken, error) {
 			&i.ExpiresAt,
 			&i.UsedAt,
 			&i.CreatedAt,
+			&i.Attempts,
 		); err != nil {
 			return nil, err
 		}
@@ -180,7 +208,7 @@ SET used_at = now()
 WHERE id = $1
   AND used_at IS NULL
   AND expires_at > now()
-RETURNING id, user_id, purpose, token_hash, expires_at, used_at, created_at
+RETURNING id, user_id, purpose, token_hash, expires_at, used_at, created_at, attempts
 `
 
 func (q *Queries) RevokeUserToken(ctx context.Context, id uuid.UUID) (UserToken, error) {
@@ -194,6 +222,7 @@ func (q *Queries) RevokeUserToken(ctx context.Context, id uuid.UUID) (UserToken,
 		&i.ExpiresAt,
 		&i.UsedAt,
 		&i.CreatedAt,
+		&i.Attempts,
 	)
 	return i, err
 }
