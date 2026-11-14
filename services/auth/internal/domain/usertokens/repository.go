@@ -23,4 +23,5 @@ type UserTokensRepository interface {
 	ConsumePasswordReset(ctx context.Context, tokenHash, passwordHash string) error
 	Delete(ctx context.Context, id uuid.UUID) (*uuid.UUID, error)
 	DeleteAllStale(ctx context.Context) (int64, error)
+	RecordFailedAttempt(ctx context.Context, tokenHash, purpose string, maxAttempts int) (attempts int, err error)
 }
