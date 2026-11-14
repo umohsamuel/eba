@@ -50,3 +50,14 @@ WHERE token_hash = $1
   AND used_at IS NULL
   AND expires_at > now()
 RETURNING user_id;
+
+
+-- name: IncrementUserTokenAttempts :one
+UPDATE user_tokens
+SET attempts = attempts + 1,
+    used_at  = CASE WHEN attempts + 1 >= sqlc.arg(max_attempts)::int THEN now() ELSE used_at END
+WHERE token_hash = $1
+  AND purpose = $2
+  AND used_at IS NULL
+  AND expires_at > now()
+RETURNING attempts;

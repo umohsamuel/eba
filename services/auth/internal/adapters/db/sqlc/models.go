@@ -37,6 +37,14 @@ type User struct {
 	CreatedAt    sql.NullTime
 }
 
+type UserRecoveryCode struct {
+	ID        uuid.UUID
+	UserID    uuid.UUID
+	CodeHash  string
+	UsedAt    sql.NullTime
+	CreatedAt time.Time
+}
+
 type UserToken struct {
 	ID        uuid.UUID
 	UserID    uuid.UUID
@@ -45,4 +53,13 @@ type UserToken struct {
 	ExpiresAt time.Time
 	UsedAt    sql.NullTime
 	CreatedAt time.Time
+	Attempts  int32
+}
+
+type UserTotp struct {
+	UserID          uuid.UUID
+	SecretEncrypted []byte
+	ConfirmedAt     sql.NullTime
+	LastUsedStep    sql.NullInt64
+	CreatedAt       time.Time
 }
