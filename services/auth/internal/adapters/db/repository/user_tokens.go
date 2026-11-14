@@ -49,6 +49,7 @@ func (u *UserTokensRepositoryAdapter) Create(ctx context.Context, token *usertok
 		TokenHash: ut.TokenHash,
 		ExpiresAt: ut.ExpiresAt,
 		UsedAt:    usedAtPtr(ut.UsedAt),
+		Attempts:  int(ut.Attempts),
 	}, nil
 }
 
@@ -121,6 +122,7 @@ func (u *UserTokensRepositoryAdapter) GetByID(ctx context.Context, id uuid.UUID)
 		TokenHash: ut.TokenHash,
 		ExpiresAt: ut.ExpiresAt,
 		UsedAt:    usedAtPtr(ut.UsedAt),
+		Attempts:  int(ut.Attempts),
 	}, nil
 }
 
@@ -140,6 +142,7 @@ func (u *UserTokensRepositoryAdapter) GetByHash(ctx context.Context, hash string
 		TokenHash: ut.TokenHash,
 		ExpiresAt: ut.ExpiresAt,
 		UsedAt:    usedAtPtr(ut.UsedAt),
+		Attempts:  int(ut.Attempts),
 	}, nil
 }
 
@@ -159,6 +162,7 @@ func (u *UserTokensRepositoryAdapter) List(ctx context.Context, filter usertoken
 			TokenHash: t.TokenHash,
 			ExpiresAt: t.ExpiresAt,
 			UsedAt:    usedAtPtr(t.UsedAt),
+			Attempts:  int(t.Attempts),
 		})
 	}
 
@@ -181,6 +185,7 @@ func (u *UserTokensRepositoryAdapter) Revoke(ctx context.Context, id uuid.UUID) 
 		TokenHash: ut.TokenHash,
 		ExpiresAt: ut.ExpiresAt,
 		UsedAt:    usedAtPtr(ut.UsedAt),
+		Attempts:  int(ut.Attempts),
 	}, nil
 }
 
@@ -264,4 +269,20 @@ func (u *UserTokensRepositoryAdapter) ConsumePasswordReset(ctx context.Context, 
 	}
 
 	return nil
+}
+
+func (u *UserTokensRepositoryAdapter) RecordFailedAttempt(ctx context.Context, tokenHash, purpose string, maxAttempts int) (int, error) {
+	attempts, err := u.queries.IncrementUserTokenAttempts(ctx, sqlc.IncrementUserTokenAttemptsParams{
+		TokenHash:   tokenHash,
+		Purpose:     purpose,
+		MaxAttempts: int32(maxAttempts),
+	})
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return 0, domainerrors.ErrTokenInvalid.Wrap(err)
+		}
+		return 0, domainerrors.ErrInternal.Wrap(err)
+	}
+
+	return int(attempts), nil
 }
