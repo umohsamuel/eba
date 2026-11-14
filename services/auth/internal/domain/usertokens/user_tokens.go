@@ -7,6 +7,7 @@ import (
 )
 
 const PurposePasswordReset = "password_reset"
+const PurposeMFAChallenge = "mfa_challenge"
 
 type UserToken struct {
 	ID        uuid.UUID  `json:"id"`
@@ -15,4 +16,5 @@ type UserToken struct {
 	TokenHash string     `json:"token_hash"`
 	ExpiresAt time.Time  `json:"expires_at"`
 	UsedAt    *time.Time `json:"used_at"`
+	Attempts  int        `json:"attempts"`
 }

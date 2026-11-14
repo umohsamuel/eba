@@ -8,4 +8,5 @@ type User struct {
 	ID           uuid.UUID `json:"id"`
 	Email        string    `json:"email"`
 	PasswordHash string    `json:"-"`
+	MFAEnabled   bool      `json:"mfa_enabled"`
 }

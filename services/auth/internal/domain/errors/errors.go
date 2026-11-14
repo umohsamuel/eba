@@ -65,4 +65,10 @@ var (
 		apperror.KindValidation,
 		"password must be 8-32 characters long and contain at least one uppercase letter, one lowercase letter, one digit, and one special character",
 	)
+
+	ErrMFACodeInvalid = apperror.New(apperror.KindUnauthorized, "invalid verification code")
+
+	ErrMFAAlreadyEnabled = apperror.New(apperror.KindConflict, "two-factor authentication is already enabled")
+
+	ErrMFANotEnrolled = apperror.New(apperror.KindNotFound, "two-factor authentication is not set up")
 )
