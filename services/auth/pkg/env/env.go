@@ -19,6 +19,8 @@ type Env struct {
 	PASSWORD_RESET_TTL time.Duration `env:"PASSWORD_RESET_TTL" envDefault:"30m"`
 	PASSWORD_RESET_URL url.URL       `env:"PASSWORD_RESET_URL,notEmpty"`
 
+	MFA_ENCRYPTION_KEY string `env:"MFA_ENCRYPTION_KEY,notEmpty"`
+
 	DB        PostgresEnv
 	JWT       JWTEnv
 	Cookie    CookieEnv
