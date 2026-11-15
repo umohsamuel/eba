@@ -33,6 +33,12 @@ definitions:
     type: object
   github_com_umohsamuel_eba_services_auth_internal_services_auth.LoginResponse:
     properties:
+      challenge_expires_at:
+        type: string
+      challenge_token:
+        type: string
+      mfa_required:
+        type: boolean
       token:
         $ref: '#/definitions/github_com_umohsamuel_eba_services_auth_internal_services_auth.TokenConfig'
       user:
@@ -68,6 +74,13 @@ definitions:
   internal_adapters_transport_http_handlers.forgotPasswordRequest:
     properties:
       email:
+        type: string
+    type: object
+  internal_adapters_transport_http_handlers.loginMFARequest:
+    properties:
+      challenge_token:
+        type: string
+      code:
         type: string
     type: object
   internal_adapters_transport_http_handlers.loginRequest:
@@ -303,7 +316,8 @@ paths:
       description: |-
         Authenticates a user. Web clients (default) receive the tokens as HttpOnly cookies and only
         their expiry times in the body. Clients sending X-Client-Type: mobile receive the tokens in
-        the body and no cookies.
+        the body and no cookies. If two-factor authentication is on, no tokens are issued: the
+        response has mfa_required and a challenge_token to send to /auth/login/mfa with a code.
       parameters:
       - description: Client type
         enum:
@@ -338,6 +352,50 @@ paths:
           schema:
             $ref: '#/definitions/response.Envelope-any'
       summary: Log in
+      tags:
+      - auth
+  /auth/login/mfa:
+    post:
+      consumes:
+      - application/json
+      description: |-
+        Exchanges the challenge_token from /auth/login and a code from the authenticator app (or a
+        recovery code) for tokens, delivered the same way as /auth/login. The challenge expires after
+        5 minutes and is invalidated after 5 wrong codes.
+      parameters:
+      - description: Client type
+        enum:
+        - web
+        - mobile
+        in: header
+        name: X-Client-Type
+        type: string
+      - description: Challenge token and code
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_adapters_transport_http_handlers.loginMFARequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Envelope-github_com_umohsamuel_eba_services_auth_internal_services_auth_LoginResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.Envelope-any'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.Envelope-any'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/response.Envelope-any'
+      summary: Complete a two-factor login
       tags:
       - auth
   /auth/mfa/recovery-codes:

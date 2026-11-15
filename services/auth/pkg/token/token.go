@@ -33,9 +33,10 @@ func NewTokenManager(issuer string, accessKeys *AccessKeys, accessAudience []str
 	}
 }
 
-func (m *TokenManager) GenerateAccessToken(user user.User, issuedAt, expiresAt time.Time) (string, error) {
+func (m *TokenManager) GenerateAccessToken(user user.User, amr []string, issuedAt, expiresAt time.Time) (string, error) {
 	claims := CustomClaims{
 		User: user,
+		AMR:  amr,
 		RegisteredClaims: jwt.RegisteredClaims{
 			Subject:   user.ID.String(),              // sub
 			ExpiresAt: jwt.NewNumericDate(expiresAt), // exp
@@ -59,13 +60,15 @@ func (m *TokenManager) GenerateAccessToken(user user.User, issuedAt, expiresAt t
 
 type CustomClaims struct {
 	User user.User `json:"user"`
+	AMR  []string  `json:"amr,omitempty"`
 	jwt.RegisteredClaims
 }
 
-func (m *TokenManager) GenerateRefreshToken(user user.User, refreshTokenId string, issuedAt, expiresAt time.Time) (string, error) {
+func (m *TokenManager) GenerateRefreshToken(user user.User, refreshTokenId string, amr []string, issuedAt, expiresAt time.Time) (string, error) {
 
 	claims := CustomClaims{
 		User: user,
+		AMR:  amr,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ID:        refreshTokenId,                // jti
 			Subject:   user.ID.String(),              // sub
