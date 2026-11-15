@@ -11,6 +11,7 @@ const (
 	TemplateAuthVerifyEmail     = "auth.verify_email"
 	TemplateAuthPasswordReset   = "auth.password_reset"
 	TemplateAuthPasswordChanged = "auth.password_changed"
+	TemplateAuthMFADisabled     = "auth.mfa_disabled"
 )
 
 const (

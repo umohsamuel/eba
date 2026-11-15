@@ -49,6 +49,11 @@ var definitions = map[string]definition{
 		html:    "auth/password_changed.html",
 		text:    "auth/password_changed.txt",
 	},
+	events.TemplateAuthMFADisabled: {
+		subject: "Two-factor authentication was turned off",
+		html:    "auth/mfa_disabled.html",
+		text:    "auth/mfa_disabled.txt",
+	},
 }
 
 type compiled struct {
