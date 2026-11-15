@@ -64,6 +64,8 @@ type Renderer struct {
 	templates map[string]compiled
 }
 
+var _ service.Renderer = (*Renderer)(nil)
+
 func New(appName string) (*Renderer, error) {
 	files, err := fs.Sub(embedded, "files")
 	if err != nil {
