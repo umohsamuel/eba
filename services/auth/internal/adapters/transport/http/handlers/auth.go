@@ -10,7 +10,7 @@ import (
 	domainerrors "github.com/umohsamuel/eba/services/auth/internal/domain/errors"
 	_ "github.com/umohsamuel/eba/services/auth/internal/domain/user" // referenced by swag annotations
 	"github.com/umohsamuel/eba/services/auth/internal/services"
-	_ "github.com/umohsamuel/eba/services/auth/internal/services/auth" // referenced by swag annotations
+	"github.com/umohsamuel/eba/services/auth/internal/services/auth"
 )
 
 type AuthHandler struct {
@@ -27,6 +27,7 @@ func (h *AuthHandler) RegisterRoutes(rg *gin.RouterGroup) {
 	{
 		authGroup.POST("/register", h.Register)
 		authGroup.POST("/login", h.Login)
+		authGroup.POST("/login/mfa", h.LoginMFA)
 		authGroup.POST("/refresh", h.Refresh)
 		authGroup.POST("/forgot-password", h.ForgotPassword)
 		authGroup.POST("/reset-password", h.ResetPassword)
@@ -78,7 +79,8 @@ type loginRequest struct {
 //	@Summary		Log in
 //	@Description	Authenticates a user. Web clients (default) receive the tokens as HttpOnly cookies and only
 //	@Description	their expiry times in the body. Clients sending X-Client-Type: mobile receive the tokens in
-//	@Description	the body and no cookies.
+//	@Description	the body and no cookies. If two-factor authentication is on, no tokens are issued: the
+//	@Description	response has mfa_required and a challenge_token to send to /auth/login/mfa with a code.
 //	@Tags			auth
 //	@Accept			json
 //	@Produce		json
@@ -103,7 +105,49 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		return
 	}
 
-	if clientTypeOf(c) == clientWeb {
+	h.sendSession(c, loginResponse)
+}
+
+type loginMFARequest struct {
+	ChallengeToken string `json:"challenge_token"`
+	Code           string `json:"code"`
+}
+
+// LoginMFA godoc
+//
+//	@Summary		Complete a two-factor login
+//	@Description	Exchanges the challenge_token from /auth/login and a code from the authenticator app (or a
+//	@Description	recovery code) for tokens, delivered the same way as /auth/login. The challenge expires after
+//	@Description	5 minutes and is invalidated after 5 wrong codes.
+//	@Tags			auth
+//	@Accept			json
+//	@Produce		json
+//	@Param			X-Client-Type	header		string									false	"Client type"	Enums(web, mobile)
+//	@Param			request			body		loginMFARequest							true	"Challenge token and code"
+//	@Success		200		{object}	response.Envelope[auth.LoginResponse]
+//	@Failure		400		{object}	response.Envelope[any]
+//	@Failure		401		{object}	response.Envelope[any]
+//	@Failure		500		{object}	response.Envelope[any]
+//	@Router			/auth/login/mfa [post]
+func (h *AuthHandler) LoginMFA(c *gin.Context) {
+	var req loginMFARequest
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		ginresponse.HandleError(c, domainerrors.ErrBadRequest.Wrap(err)).Send()
+		return
+	}
+
+	loginResponse, err := h.services.Auth.LoginMFA(c, req.ChallengeToken, req.Code)
+	if err != nil {
+		ginresponse.HandleError(c, err).Send()
+		return
+	}
+
+	h.sendSession(c, loginResponse)
+}
+
+func (h *AuthHandler) sendSession(c *gin.Context, loginResponse *auth.LoginResponse) {
+	if !loginResponse.MFARequired && clientTypeOf(c) == clientWeb {
 		h.cookies.SetAuth(c, loginResponse.Token)
 		loginResponse.Token = withoutTokens(loginResponse.Token)
 	}

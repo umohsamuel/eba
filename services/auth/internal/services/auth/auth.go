@@ -25,6 +25,14 @@ import (
 	"github.com/umohsamuel/eba/services/auth/pkg/token"
 )
 
+const (
+	mfaChallengeTTL = 5 * time.Minute
+	mfaMaxAttempts  = 5
+
+	amrPassword = "pwd"
+	amrOTP      = "otp"
+)
+
 type AuthService struct {
 	users        user.UserRepository
 	refreshToken refreshtoken.RefreshTokenRepository
@@ -127,8 +135,11 @@ type UserResponse struct {
 }
 
 type LoginResponse struct {
-	User  *UserResponse `json:"user"`
-	Token *TokenConfig  `json:"token"`
+	User               *UserResponse `json:"user,omitempty"`
+	Token              *TokenConfig  `json:"token,omitempty"`
+	MFARequired        bool          `json:"mfa_required"`
+	ChallengeToken     string        `json:"challenge_token,omitempty"`
+	ChallengeExpiresAt *time.Time    `json:"challenge_expires_at,omitempty"`
 }
 
 func (s *AuthService) Login(
@@ -169,20 +180,106 @@ func (s *AuthService) Login(
 		return nil, err
 	}
 
+	if mfaEnabled {
+		return s.createMFAChallenge(ctx, u)
+	}
+
+	return s.issueSession(ctx, u, []string{amrPassword}, false)
+}
+
+func (s *AuthService) LoginMFA(
+	ctx context.Context,
+	challengeToken string,
+	code string,
+) (*LoginResponse, error) {
+	if challengeToken == "" {
+		return nil, errors.ErrTokenInvalid
+	}
+
+	challengeHash := hash.HashToken(challengeToken)
+
+	ut, err := s.usertoken.GetByHash(ctx, challengeHash)
+	if err != nil {
+		if stderrors.Is(err, errors.ErrNotFound) {
+			return nil, errors.ErrTokenInvalid.Wrap(err)
+		}
+		return nil, err
+	}
+
+	if ut.Purpose != usertokens.PurposeMFAChallenge || ut.UsedAt != nil || time.Now().After(ut.ExpiresAt) {
+		return nil, errors.ErrTokenInvalid
+	}
+
+	u, err := s.users.GetByID(ctx, ut.UserID)
+	if err != nil {
+		if stderrors.Is(err, errors.ErrUserNotFound) {
+			return nil, errors.ErrTokenInvalid.Wrap(err)
+		}
+		return nil, err
+	}
+
+	if err := s.mfaVerifier.VerifyCode(ctx, u.ID, code); err != nil {
+		switch {
+		case stderrors.Is(err, errors.ErrMFACodeInvalid):
+			if _, recordErr := s.usertoken.RecordFailedAttempt(ctx, challengeHash, usertokens.PurposeMFAChallenge, mfaMaxAttempts); recordErr != nil {
+				return nil, recordErr
+			}
+			return nil, err
+		case stderrors.Is(err, errors.ErrMFANotEnrolled):
+			return nil, errors.ErrTokenInvalid.Wrap(err)
+		default:
+			return nil, err
+		}
+	}
+
+	if _, err := s.usertoken.Revoke(ctx, ut.ID); err != nil {
+		return nil, err
+	}
+
+	return s.issueSession(ctx, u, []string{amrPassword, amrOTP}, true)
+}
+
+func (s *AuthService) createMFAChallenge(ctx context.Context, u *user.User) (*LoginResponse, error) {
+	rawChallenge, err := newOpaqueToken()
+	if err != nil {
+		return nil, errors.ErrInternal.Wrap(err)
+	}
+
+	expiresAt := time.Now().UTC().Add(mfaChallengeTTL)
+
+	_, err = s.usertoken.Create(ctx, &usertokens.UserToken{
+		ID:        uuid.New(),
+		UserID:    u.ID,
+		Purpose:   usertokens.PurposeMFAChallenge,
+		TokenHash: hash.HashToken(rawChallenge),
+		ExpiresAt: expiresAt,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return &LoginResponse{
+		MFARequired:        true,
+		ChallengeToken:     rawChallenge,
+		ChallengeExpiresAt: &expiresAt,
+	}, nil
+}
+
+func (s *AuthService) issueSession(ctx context.Context, u *user.User, amr []string, mfaEnabled bool) (*LoginResponse, error) {
 	// JWT timestamps have second precision; truncating keeps the returned
 	// expiry times identical to the exp claims.
 	issuedAt := time.Now().UTC().Truncate(time.Second)
 	accessExpiresAt := issuedAt.Add(s.env.JWT.JWT_ACCESS_TTL)
 	expiresAt := issuedAt.Add(s.env.JWT.JWT_REFRESH_TTL)
 
-	accessToken, err := s.tokenManager.GenerateAccessToken(*u, issuedAt, accessExpiresAt)
+	accessToken, err := s.tokenManager.GenerateAccessToken(*u, amr, issuedAt, accessExpiresAt)
 	if err != nil {
 		return nil, errors.ErrInternal.Wrap(err)
 	}
 
 	id := uuid.New()
 
-	rawRefreshToken, err := s.tokenManager.GenerateRefreshToken(*u, id.String(), issuedAt, expiresAt)
+	rawRefreshToken, err := s.tokenManager.GenerateRefreshToken(*u, id.String(), amr, issuedAt, expiresAt)
 	if err != nil {
 		return nil, errors.ErrInternal.Wrap(err)
 	}
@@ -361,7 +458,7 @@ func (s *AuthService) RefreshAccessToken(
 	issuedAt := time.Now().UTC().Truncate(time.Second)
 	accessExpiresAt := issuedAt.Add(s.env.JWT.JWT_ACCESS_TTL)
 
-	accessToken, err := s.tokenManager.GenerateAccessToken(*u, issuedAt, accessExpiresAt)
+	accessToken, err := s.tokenManager.GenerateAccessToken(*u, claims.AMR, issuedAt, accessExpiresAt)
 	if err != nil {
 		return nil, errors.ErrInternal.Wrap(err)
 	}
