@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"database/sql"
+	"errors"
 
 	"github.com/google/uuid"
 	"github.com/umohsamuel/eba/services/auth/internal/adapters/db/sqlc"
@@ -27,14 +28,17 @@ var _ mfa.MFARepository = (*MFARepositoryAdapter)(nil)
 func (m *MFARepositoryAdapter) GetTOTP(ctx context.Context, userID uuid.UUID) (*mfa.TOTP, error) {
 	t, err := m.queries.GetUserTOTP(ctx, userID)
 	if err != nil {
-		return nil, domainerrors.ErrMFANotEnrolled.Wrap(err)
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, domainerrors.ErrMFANotEnrolled.Wrap(err)
+		}
+		return nil, domainerrors.ErrInternal.Wrap(err)
 	}
 
 	return &mfa.TOTP{
 		UserID:          t.UserID,
 		SecretEncrypted: t.SecretEncrypted,
-		ConfirmedAt:     &t.ConfirmedAt.Time,
-		LastUsedStep:    &t.LastUsedStep.Int64,
+		ConfirmedAt:     usedAtPtr(t.ConfirmedAt),
+		LastUsedStep:    int64Ptr(t.LastUsedStep),
 		CreatedAt:       t.CreatedAt,
 	}, nil
 }
@@ -42,7 +46,7 @@ func (m *MFARepositoryAdapter) GetTOTP(ctx context.Context, userID uuid.UUID) (*
 func (m *MFARepositoryAdapter) IsEnabled(ctx context.Context, userID uuid.UUID) (bool, error) {
 	enabled, err := m.queries.IsUserMFAEnabled(ctx, userID)
 	if err != nil {
-		return false, domainerrors.ErrMFANotEnrolled.Wrap(err)
+		return false, domainerrors.ErrInternal.Wrap(err)
 	}
 
 	return enabled, nil
@@ -54,15 +58,17 @@ func (m *MFARepositoryAdapter) SavePendingTOTP(ctx context.Context, userID uuid.
 		SecretEncrypted: secretEncrypted,
 	})
 	if err != nil {
-		return domainerrors.ErrMFAAlreadyEnabled.Wrap(err)
+		if isForeignKeyViolation(err) {
+			return domainerrors.ErrUserNotFound.Wrap(err)
+		}
+		return domainerrors.ErrInternal.Wrap(err)
 	}
 
-	if count > 0 {
-		return nil
+	if count == 0 {
+		return domainerrors.ErrMFAAlreadyEnabled
 	}
 
-	return domainerrors.ErrInternal.Wrap(err)
-
+	return nil
 }
 
 func (m *MFARepositoryAdapter) ConfirmTOTP(ctx context.Context, userID uuid.UUID, step int64, recoveryCodeHashes []string) error {
@@ -74,45 +80,42 @@ func (m *MFARepositoryAdapter) ConfirmTOTP(ctx context.Context, userID uuid.UUID
 
 	q := m.queries.WithTx(tx)
 
-	_, err = q.ConfirmUserTOTP(ctx, sqlc.ConfirmUserTOTPParams{
+	count, err := q.ConfirmUserTOTP(ctx, sqlc.ConfirmUserTOTPParams{
 		UserID:       userID,
-		LastUsedStep: step,
+		LastUsedStep: sql.NullInt64{Int64: step, Valid: true},
 	})
 	if err != nil {
-		return domainerrors.ErrMFANotEnrolled.Wrap(err)
+		return domainerrors.ErrInternal.Wrap(err)
+	}
+	if count == 0 {
+		return domainerrors.ErrMFANotEnrolled
 	}
 
-	recoveryCodeId := uuid.New()
-
-	for i, _ := range recoveryCodeHashes {
-		err = q.InsertUserRecoveryCode(ctx, sqlc.InsertUserRecoveryCodeParams{
-			ID:       recoveryCodeId,
-			UserID:   userID,
-			CodeHash: recoveryCodeHashes[i],
-		})
-		if err != nil {
-			return domainerrors.ErrMFACodeInvalid.Wrap(err)
-		}
+	if err := insertRecoveryCodes(ctx, q, userID, recoveryCodeHashes); err != nil {
+		return err
 	}
 
-	return tx.Commit()
+	if err := tx.Commit(); err != nil {
+		return domainerrors.ErrInternal.Wrap(err)
+	}
+
+	return nil
 }
 
 func (m *MFARepositoryAdapter) AdvanceStep(ctx context.Context, userID uuid.UUID, step int64) error {
 	count, err := m.queries.AdvanceUserTOTPStep(ctx, sqlc.AdvanceUserTOTPStepParams{
 		UserID:       userID,
-		LastUsedStep: step,
+		LastUsedStep: sql.NullInt64{Int64: step, Valid: true},
 	})
 	if err != nil {
-		return domainerrors.ErrMFACodeInvalid.Wrap(err)
+		return domainerrors.ErrInternal.Wrap(err)
 	}
 
-	if count > 0 {
-		return nil
+	if count == 0 {
+		return domainerrors.ErrMFACodeInvalid
 	}
 
-	return domainerrors.ErrMFACodeInvalid.Wrap(err)
-
+	return nil
 }
 
 func (m *MFARepositoryAdapter) Disable(ctx context.Context, userID uuid.UUID) error {
@@ -124,17 +127,19 @@ func (m *MFARepositoryAdapter) Disable(ctx context.Context, userID uuid.UUID) er
 
 	q := m.queries.WithTx(tx)
 
-	err = q.DeleteUserTOTP(ctx, userID)
-	if err != nil {
-		return domainerrors.ErrMFANotEnrolled.Wrap(err)
+	if err := q.DeleteUserTOTP(ctx, userID); err != nil {
+		return domainerrors.ErrInternal.Wrap(err)
 	}
 
-	err = q.DeleteUserRecoveryCodes(ctx, userID)
-	if err != nil {
-		return domainerrors.ErrMFANotEnrolled.Wrap(err)
+	if err := q.DeleteUserRecoveryCodes(ctx, userID); err != nil {
+		return domainerrors.ErrInternal.Wrap(err)
 	}
 
-	return tx.Commit()
+	if err := tx.Commit(); err != nil {
+		return domainerrors.ErrInternal.Wrap(err)
+	}
+
+	return nil
 }
 
 func (m *MFARepositoryAdapter) ReplaceRecoveryCodes(ctx context.Context, userID uuid.UUID, codeHashes []string) error {
@@ -146,26 +151,19 @@ func (m *MFARepositoryAdapter) ReplaceRecoveryCodes(ctx context.Context, userID 
 
 	q := m.queries.WithTx(tx)
 
-	err = q.DeleteUserRecoveryCodes(ctx, userID)
-	if err != nil {
-		return domainerrors.ErrMFANotEnrolled.Wrap(err)
+	if err := q.DeleteUserRecoveryCodes(ctx, userID); err != nil {
+		return domainerrors.ErrInternal.Wrap(err)
 	}
 
-	codeId := uuid.New()
-
-	for i, _ := range codeHashes {
-		err = q.InsertUserRecoveryCode(ctx, sqlc.InsertUserRecoveryCodeParams{
-			ID:       codeId,
-			UserID:   userID,
-			CodeHash: codeHashes[i],
-		})
-		if err != nil {
-			return domainerrors.ErrMFACodeInvalid.Wrap(err)
-		}
+	if err := insertRecoveryCodes(ctx, q, userID, codeHashes); err != nil {
+		return err
 	}
 
-	return tx.Commit()
+	if err := tx.Commit(); err != nil {
+		return domainerrors.ErrInternal.Wrap(err)
+	}
 
+	return nil
 }
 
 func (m *MFARepositoryAdapter) ConsumeRecoveryCode(ctx context.Context, userID uuid.UUID, codeHash string) error {
@@ -174,23 +172,46 @@ func (m *MFARepositoryAdapter) ConsumeRecoveryCode(ctx context.Context, userID u
 		CodeHash: codeHash,
 	})
 	if err != nil {
-		return domainerrors.ErrMFACodeInvalid.Wrap(err)
+		return domainerrors.ErrInternal.Wrap(err)
 	}
 
-	if count > 0 {
-		return nil
+	if count == 0 {
+		return domainerrors.ErrMFACodeInvalid
 	}
 
-	return domainerrors.ErrInternal
-
+	return nil
 }
 
 func (m *MFARepositoryAdapter) CountRecoveryCodes(ctx context.Context, userID uuid.UUID) (int64, error) {
 	count, err := m.queries.CountUnusedUserRecoveryCodes(ctx, userID)
 	if err != nil {
-		return 0, domainerrors.ErrMFANotEnrolled.Wrap(err)
+		return 0, domainerrors.ErrInternal.Wrap(err)
 	}
 
 	return count, nil
+}
 
+func insertRecoveryCodes(ctx context.Context, q *sqlc.Queries, userID uuid.UUID, codeHashes []string) error {
+	for _, codeHash := range codeHashes {
+		err := q.InsertUserRecoveryCode(ctx, sqlc.InsertUserRecoveryCodeParams{
+			ID:       uuid.New(),
+			UserID:   userID,
+			CodeHash: codeHash,
+		})
+		if err != nil {
+			if isForeignKeyViolation(err) {
+				return domainerrors.ErrUserNotFound.Wrap(err)
+			}
+			return domainerrors.ErrInternal.Wrap(err)
+		}
+	}
+
+	return nil
+}
+
+func int64Ptr(n sql.NullInt64) *int64 {
+	if !n.Valid {
+		return nil
+	}
+	return &n.Int64
 }
