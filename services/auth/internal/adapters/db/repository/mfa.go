@@ -9,6 +9,7 @@ import (
 	"github.com/umohsamuel/eba/services/auth/internal/adapters/db/sqlc"
 	domainerrors "github.com/umohsamuel/eba/services/auth/internal/domain/errors"
 	"github.com/umohsamuel/eba/services/auth/internal/domain/mfa"
+	"github.com/umohsamuel/eba/services/auth/internal/domain/outbox"
 )
 
 type MFARepositoryAdapter struct {
@@ -118,7 +119,7 @@ func (m *MFARepositoryAdapter) AdvanceStep(ctx context.Context, userID uuid.UUID
 	return nil
 }
 
-func (m *MFARepositoryAdapter) Disable(ctx context.Context, userID uuid.UUID) error {
+func (m *MFARepositoryAdapter) Disable(ctx context.Context, userID uuid.UUID, event outbox.OutboxEvent) error {
 	tx, err := m.db.BeginTx(ctx, nil)
 	if err != nil {
 		return domainerrors.ErrInternal.Wrap(err)
@@ -132,6 +133,21 @@ func (m *MFARepositoryAdapter) Disable(ctx context.Context, userID uuid.UUID) er
 	}
 
 	if err := q.DeleteUserRecoveryCodes(ctx, userID); err != nil {
+		return domainerrors.ErrInternal.Wrap(err)
+	}
+
+	err = q.InsertOutboxEvent(ctx, sqlc.InsertOutboxEventParams{
+		ID:            event.ID,
+		Aggregatetype: event.AggregateType,
+		Aggregateid:   event.AggregateID,
+		Type:          event.Type,
+		Payload:       event.Payload,
+	})
+	if err != nil {
+		return domainerrors.ErrInternal.Wrap(err)
+	}
+
+	if err := q.DeleteOutboxEvent(ctx, event.ID); err != nil {
 		return domainerrors.ErrInternal.Wrap(err)
 	}
 

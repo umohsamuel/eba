@@ -67,11 +67,13 @@ func (s *HttpServer) setupRoutes() {
 
 	authMW := middlewares.NewAuth(s.services.Auth)
 	protected := v1.Group("", authMW.Handle)
-	_ = protected
 
 	authHandler := handlers.NewAuthHandler(s.services, s.cookieCfg)
 	authHandler.RegisterRoutes(v1)
 	s.router.GET("/.well-known/jwks.json", authHandler.JWKS)
+
+	mfaHandler := handlers.NewMFAHandler(s.services)
+	mfaHandler.RegisterRoutes(protected)
 
 	migrationHandler := handlers.NewMigrationHandler(s.migrationCfg)
 	migrationHandler.RegisterRoutes(v1)

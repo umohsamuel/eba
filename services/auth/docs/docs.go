@@ -123,6 +123,244 @@ const docTemplate = `{
                 }
             }
         },
+        "/auth/mfa/recovery-codes": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Requires a current authenticator code or a recovery code. Replaces all recovery codes; the new\ncodes are shown only once.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "mfa"
+                ],
+                "summary": "Regenerate recovery codes",
+                "parameters": [
+                    {
+                        "description": "Authenticator or recovery code",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_adapters_transport_http_handlers.mfaCodeRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Envelope-internal_adapters_transport_http_handlers_recoveryCodesResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Envelope-any"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/response.Envelope-any"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/response.Envelope-any"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Envelope-any"
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/mfa/totp/confirm": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Turns on two-factor authentication with a code from the authenticator app and returns\nrecovery codes. The recovery codes are shown only once.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "mfa"
+                ],
+                "summary": "Confirm TOTP setup",
+                "parameters": [
+                    {
+                        "description": "Code from the authenticator app",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_adapters_transport_http_handlers.mfaCodeRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Envelope-internal_adapters_transport_http_handlers_recoveryCodesResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Envelope-any"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/response.Envelope-any"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/response.Envelope-any"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/response.Envelope-any"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Envelope-any"
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/mfa/totp/disable": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Requires a current authenticator code or a recovery code. Deletes the TOTP secret and all\nrecovery codes, and emails the user an alert.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "mfa"
+                ],
+                "summary": "Turn off two-factor authentication",
+                "parameters": [
+                    {
+                        "description": "Authenticator or recovery code",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_adapters_transport_http_handlers.mfaCodeRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Envelope-any"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Envelope-any"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/response.Envelope-any"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/response.Envelope-any"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Envelope-any"
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/mfa/totp/setup": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Generates a TOTP secret for the signed-in user. Render otpauth_url as a QR code, or let the\nuser enter the secret manually. Two-factor authentication stays off until it is confirmed.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "mfa"
+                ],
+                "summary": "Start TOTP setup",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Envelope-github_com_umohsamuel_eba_services_auth_internal_services_mfa_SetupResult"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/response.Envelope-any"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/response.Envelope-any"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Envelope-any"
+                        }
+                    }
+                }
+            }
+        },
         "/auth/refresh": {
             "post": {
                 "description": "Exchanges a valid refresh token for a new access token. Web clients (default) send no body;\nthe refresh token is read from its cookie and the new access token is set as a cookie.\nClients sending X-Client-Type: mobile send the refresh token in the body and receive the\ntokens in the response.",
@@ -614,6 +852,17 @@ const docTemplate = `{
                 }
             }
         },
+        "github_com_umohsamuel_eba_services_auth_internal_services_mfa.SetupResult": {
+            "type": "object",
+            "properties": {
+                "otpauth_url": {
+                    "type": "string"
+                },
+                "secret": {
+                    "type": "string"
+                }
+            }
+        },
         "internal_adapters_transport_http_handlers.forgotPasswordRequest": {
             "type": "object",
             "properties": {
@@ -630,6 +879,25 @@ const docTemplate = `{
                 },
                 "password": {
                     "type": "string"
+                }
+            }
+        },
+        "internal_adapters_transport_http_handlers.mfaCodeRequest": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_adapters_transport_http_handlers.recoveryCodesResponse": {
+            "type": "object",
+            "properties": {
+                "recovery_codes": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 }
             }
         },
@@ -791,6 +1059,46 @@ const docTemplate = `{
             "properties": {
                 "data": {
                     "$ref": "#/definitions/github_com_umohsamuel_eba_services_auth_internal_services_auth.TokenConfig"
+                },
+                "error": {
+                    "$ref": "#/definitions/response.APIError"
+                },
+                "message": {
+                    "type": "string"
+                },
+                "meta": {
+                    "$ref": "#/definitions/response.Meta"
+                },
+                "status": {
+                    "type": "string"
+                }
+            }
+        },
+        "response.Envelope-github_com_umohsamuel_eba_services_auth_internal_services_mfa_SetupResult": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/github_com_umohsamuel_eba_services_auth_internal_services_mfa.SetupResult"
+                },
+                "error": {
+                    "$ref": "#/definitions/response.APIError"
+                },
+                "message": {
+                    "type": "string"
+                },
+                "meta": {
+                    "$ref": "#/definitions/response.Meta"
+                },
+                "status": {
+                    "type": "string"
+                }
+            }
+        },
+        "response.Envelope-internal_adapters_transport_http_handlers_recoveryCodesResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/internal_adapters_transport_http_handlers.recoveryCodesResponse"
                 },
                 "error": {
                     "$ref": "#/definitions/response.APIError"
