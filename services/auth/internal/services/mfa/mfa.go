@@ -1,9 +1,23 @@
-package totp
+package mfa
 
 import (
+	"time"
+
 	"github.com/pquerna/otp"
 	"github.com/pquerna/otp/totp"
 )
+
+const (
+	totpPeriod = 30
+	totpSkew   = 1
+)
+
+var totpOpts = totp.ValidateOpts{
+	Period:    totpPeriod,
+	Skew:      0,
+	Digits:    otp.DigitsSix,
+	Algorithm: otp.AlgorithmSHA1,
+}
 
 type TOTPService struct {
 	issuer string
@@ -15,24 +29,24 @@ func NewTOTPService(issuer string) *TOTPService {
 	}
 }
 
-func (s *TOTPService) GenerateSecret(username string) (*otp.Key, error) {
-	key, err := totp.Generate(totp.GenerateOpts{
+func (s *TOTPService) GenerateSecret(accountName string) (*otp.Key, error) {
+	return totp.Generate(totp.GenerateOpts{
 		Issuer:      s.issuer,
-		AccountName: username,
+		AccountName: accountName,
+		Period:      totpPeriod,
+		Digits:      otp.DigitsSix,
 		Algorithm:   otp.AlgorithmSHA1,
-		Digits:      6,
-		Period:      30,
-		// You can generate secret manually and set it here.
-		// If secret is not provided, library will generate a random secret
-		// Secret: secret,
 	})
-	if err != nil {
-		return nil, err
-	}
-	return key, nil
 }
 
-func (s *TOTPService) ValidateCode(secret string, code string) bool {
-	valid := totp.Validate(code, secret)
-	return valid
+func (s *TOTPService) ValidateCode(secret, code string, now time.Time) (step int64, ok bool) {
+	for offset := -totpSkew; offset <= totpSkew; offset++ {
+		at := now.Add(time.Duration(offset*totpPeriod) * time.Second)
+		valid, err := totp.ValidateCustom(code, secret, at, totpOpts)
+		if err == nil && valid {
+			return at.Unix() / totpPeriod, true
+		}
+	}
+
+	return 0, false
 }
