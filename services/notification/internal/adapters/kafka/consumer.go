@@ -70,6 +70,8 @@ type ConsumerGroupHandler struct {
 	delayDuration time.Duration
 }
 
+var _ sarama.ConsumerGroupHandler = (*ConsumerGroupHandler)(nil)
+
 func NewConsumerGroupHandler(handle HandlerFunc, router *RetryRouter, delayDuration time.Duration) *ConsumerGroupHandler {
 	return &ConsumerGroupHandler{
 		handle:        handle,

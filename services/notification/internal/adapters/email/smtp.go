@@ -25,6 +25,8 @@ type SMTPSender struct {
 	from   string
 }
 
+var _ service.EmailSender = (*SMTPSender)(nil)
+
 func NewSMTPSender(cfg SMTPConfig) (*SMTPSender, error) {
 	policy, err := tlsPolicy(cfg.TLSPolicy)
 	if err != nil {
