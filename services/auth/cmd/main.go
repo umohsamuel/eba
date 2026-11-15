@@ -14,6 +14,7 @@ import (
 	httpAdapter "github.com/umohsamuel/eba/services/auth/internal/adapters/transport/http"
 	"github.com/umohsamuel/eba/services/auth/internal/services"
 	"github.com/umohsamuel/eba/services/auth/pkg/env"
+	"github.com/umohsamuel/eba/services/auth/pkg/secretbox"
 	"github.com/umohsamuel/eba/services/auth/pkg/token"
 )
 
@@ -59,10 +60,17 @@ func main() {
 		os.Exit(1)
 	}
 
+	box, err := secretbox.NewAESGCMFromBase64(1, envCfg.MFA_ENCRYPTION_KEY)
+	if err != nil {
+		slog.Error("failed to create mfa secretbox", "error", err)
+		os.Exit(1)
+	}
+
 	appServices := services.New(services.Config{
 		Repository: repos,
 		Env:        *envCfg,
 		AccessKeys: accessKeys,
+		SecretBox:  box,
 	})
 
 	migrator, err := migrations.New(db)
