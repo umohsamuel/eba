@@ -13,6 +13,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/umohsamuel/eba/pkg/events"
 	"github.com/umohsamuel/eba/services/auth/internal/domain/errors"
+	"github.com/umohsamuel/eba/services/auth/internal/domain/mfa"
 	"github.com/umohsamuel/eba/services/auth/internal/domain/outbox"
 	"github.com/umohsamuel/eba/services/auth/internal/domain/refreshtoken"
 	"github.com/umohsamuel/eba/services/auth/internal/domain/user"
@@ -30,6 +31,12 @@ type AuthService struct {
 	env          env.Env
 	tokenManager token.TokenManager
 	usertoken    usertokens.UserTokensRepository
+	mfa          mfa.MFARepository
+	mfaVerifier  MFAVerifier
+}
+
+type MFAVerifier interface {
+	VerifyCode(ctx context.Context, userID uuid.UUID, code string) error
 }
 
 type Config struct {
@@ -38,6 +45,8 @@ type Config struct {
 	Env          env.Env
 	TokenManager token.TokenManager
 	UserToken    usertokens.UserTokensRepository
+	MFA          mfa.MFARepository
+	MFAVerifier  MFAVerifier
 }
 
 func NewAuthService(deps Config) *AuthService {
@@ -49,6 +58,8 @@ func NewAuthService(deps Config) *AuthService {
 		env:          deps.Env,
 		tokenManager: deps.TokenManager,
 		usertoken:    deps.UserToken,
+		mfa:          deps.MFA,
+		mfaVerifier:  deps.MFAVerifier,
 	}
 }
 
@@ -109,9 +120,15 @@ type TokenConfig struct {
 	RefreshTokenExpiresAt time.Time `json:"refresh_token_expires_at"`
 }
 
+type UserResponse struct {
+	ID         uuid.UUID `json:"id"`
+	Email      string    `json:"email"`
+	MFAEnabled bool      `json:"mfa_enabled"`
+}
+
 type LoginResponse struct {
-	User  *user.User   `json:"user"`
-	Token *TokenConfig `json:"token"`
+	User  *UserResponse `json:"user"`
+	Token *TokenConfig  `json:"token"`
 }
 
 func (s *AuthService) Login(
@@ -147,6 +164,11 @@ func (s *AuthService) Login(
 		return nil, errors.ErrInvalidCredentials
 	}
 
+	mfaEnabled, err := s.mfa.IsEnabled(ctx, u.ID)
+	if err != nil {
+		return nil, err
+	}
+
 	// JWT timestamps have second precision; truncating keeps the returned
 	// expiry times identical to the exp claims.
 	issuedAt := time.Now().UTC().Truncate(time.Second)
@@ -177,7 +199,11 @@ func (s *AuthService) Login(
 	}
 
 	return &LoginResponse{
-		User: u,
+		User: &UserResponse{
+			ID:         u.ID,
+			Email:      u.Email,
+			MFAEnabled: mfaEnabled,
+		},
 		Token: &TokenConfig{
 			AccessToken:           accessToken,
 			AccessTokenExpiresAt:  accessExpiresAt,

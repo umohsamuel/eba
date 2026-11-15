@@ -20,6 +20,7 @@ type Env struct {
 	PASSWORD_RESET_URL url.URL       `env:"PASSWORD_RESET_URL,notEmpty"`
 
 	MFA_ENCRYPTION_KEY string `env:"MFA_ENCRYPTION_KEY,notEmpty"`
+	MFA_ISSUER         string `env:"MFA_ISSUER" envDefault:"EBA"`
 
 	DB        PostgresEnv
 	JWT       JWTEnv

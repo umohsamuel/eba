@@ -4,6 +4,7 @@ import (
 	"database/sql"
 
 	"github.com/umohsamuel/eba/services/auth/internal/adapters/db/sqlc"
+	"github.com/umohsamuel/eba/services/auth/internal/domain/mfa"
 	"github.com/umohsamuel/eba/services/auth/internal/domain/refreshtoken"
 	"github.com/umohsamuel/eba/services/auth/internal/domain/user"
 	"github.com/umohsamuel/eba/services/auth/internal/domain/usertokens"
@@ -13,6 +14,7 @@ type AdaptersRepository struct {
 	Users     user.UserRepository
 	Refresh   refreshtoken.RefreshTokenRepository
 	UserToken usertokens.UserTokensRepository
+	MFA       mfa.MFARepository
 }
 
 type Config struct {
@@ -26,5 +28,6 @@ func New(deps Config) *AdaptersRepository {
 		Users:     NewUserRepositoryAdapter(deps.DB, queries),
 		Refresh:   NewRefreshRepositoryAdapter(deps.DB, queries),
 		UserToken: NewUserTokensRepositoryAdapter(deps.DB, queries),
+		MFA:       NewMFARepository(deps.DB, queries),
 	}
 }

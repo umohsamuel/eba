@@ -579,7 +579,7 @@ const docTemplate = `{
                     "$ref": "#/definitions/github_com_umohsamuel_eba_services_auth_internal_services_auth.TokenConfig"
                 },
                 "user": {
-                    "$ref": "#/definitions/github_com_umohsamuel_eba_services_auth_internal_domain_user.User"
+                    "$ref": "#/definitions/github_com_umohsamuel_eba_services_auth_internal_services_auth.UserResponse"
                 }
             }
         },
@@ -597,6 +597,20 @@ const docTemplate = `{
                 },
                 "refresh_token_expires_at": {
                     "type": "string"
+                }
+            }
+        },
+        "github_com_umohsamuel_eba_services_auth_internal_services_auth.UserResponse": {
+            "type": "object",
+            "properties": {
+                "email": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "mfa_enabled": {
+                    "type": "boolean"
                 }
             }
         },
