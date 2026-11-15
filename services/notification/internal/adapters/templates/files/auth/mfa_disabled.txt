@@ -1,0 +1,5 @@
+Two-factor authentication was just turned off for your {{.app_name}} account.
+
+If this was you, there's nothing else to do.
+
+If this wasn't you, reset your password immediately, turn two-factor authentication back on, and contact support.
